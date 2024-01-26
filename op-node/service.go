@@ -37,15 +37,18 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		return nil, err
 	}
 
+	// used to store seq??
 	configPersistence := NewConfigPersistence(ctx)
 
 	driverConfig := NewDriverConfig(ctx)
 
+	// unimplemented??
 	p2pSignerSetup, err := p2pcli.LoadSignerSetup(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load p2p signer: %w", err)
 	}
 
+	// disable??
 	p2pConfig, err := p2pcli.NewConfig(ctx, rollupConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load p2p config: %w", err)
@@ -58,8 +61,10 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		return nil, fmt.Errorf("failed to load l2 endpoints info: %w", err)
 	}
 
+	// unused??
 	l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 
+	// enable
 	syncConfig := NewSyncConfig(ctx)
 
 	cfg := &node.Config{
@@ -108,7 +113,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 func NewL1EndpointConfig(ctx *cli.Context) *node.L1EndpointConfig {
 	return &node.L1EndpointConfig{
 		L1NodeAddr:       ctx.GlobalString(flags.L1NodeAddr.Name),
-		L1TrustRPC:       ctx.GlobalBool(flags.L1TrustRPC.Name),
+		L1TrustRPC:       ctx.GlobalBool(flags.L1TrustRPC.Name), // ??
 		L1RPCKind:        sources.RPCProviderKind(strings.ToLower(ctx.GlobalString(flags.L1RPCProviderKind.Name))),
 		RateLimit:        ctx.GlobalFloat64(flags.L1RPCRateLimit.Name),
 		BatchSize:        ctx.GlobalInt(flags.L1RPCMaxBatchSize.Name),
@@ -142,7 +147,7 @@ func NewL2EndpointConfig(ctx *cli.Context, log log.Logger) (*node.L2EndpointConf
 
 	return &node.L2EndpointConfig{
 		L2EngineAddr:      l2Addr,
-		L2EngineJWTSecret: secret,
+		L2EngineJWTSecret: secret, // TODO, l2 engine jwt
 	}, nil
 }
 

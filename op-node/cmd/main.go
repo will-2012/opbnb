@@ -94,7 +94,7 @@ func RollupNodeMain(ctx *cli.Context) error {
 	if err := op_aws_sdk.KeyManager(context.Background(), ctx, op_aws_sdk.OP_NODE_P2P_SEQUENCER_KEY); err != nil {
 		return err
 	}
-	cfg, err := opnode.NewConfig(ctx, log)
+	cfg, err := opnode.NewConfig(ctx, log) // service.go
 	if err != nil {
 		log.Error("Unable to create the rollup node config", "error", err)
 		return err

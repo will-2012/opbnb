@@ -90,7 +90,7 @@ func (d *Sequencer) StartBuildingBlock(ctx context.Context) error {
 	fetchCtx, cancel := context.WithTimeout(ctx, time.Second*20)
 	defer cancel()
 
-	attrs, err := d.attrBuilder.PreparePayloadAttributes(fetchCtx, l2Head, l1Origin.ID())
+	attrs, err := d.attrBuilder.PreparePayloadAttributes(fetchCtx, l2Head, l1Origin.ID()) // todo
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (d *Sequencer) StartBuildingBlock(ctx context.Context) error {
 	// empty blocks (other than the L1 info deposit and any user deposits). We handle this by
 	// setting NoTxPool to true, which will cause the Sequencer to not include any transactions
 	// from the transaction pool.
-	if uint64(attrs.Timestamp) > l1Origin.Time+d.config.MaxSequencerDrift {
+	if uint64(attrs.Timestamp) > l1Origin.Time+d.config.MaxSequencerDrift { //
 		attrs.NoTxPool = true
 	} else {
 		// This is short term solution to increase sequencer catching up speed.
@@ -226,7 +226,7 @@ func (d *Sequencer) RunNextSequencerAction(ctx context.Context) (*eth.ExecutionP
 			d.nextAction = d.timeNow().Add(time.Second * time.Duration(d.config.BlockTime))
 			return nil, nil
 		}
-		payload, err := d.CompleteBuildingBlock(ctx)
+		payload, err := d.CompleteBuildingBlock(ctx) //
 		if err != nil {
 			if errors.Is(err, derive.ErrCritical) {
 				return nil, err // bubble up critical errors.
@@ -256,7 +256,7 @@ func (d *Sequencer) RunNextSequencerAction(ctx context.Context) (*eth.ExecutionP
 			return payload, nil
 		}
 	} else {
-		err := d.StartBuildingBlock(ctx)
+		err := d.StartBuildingBlock(ctx) // TODO
 		if err != nil {
 			if errors.Is(err, derive.ErrCritical) {
 				return nil, err

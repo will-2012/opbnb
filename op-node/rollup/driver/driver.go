@@ -85,7 +85,7 @@ type Network interface {
 	PublishL2Payload(ctx context.Context, payload *eth.ExecutionPayload) error
 }
 
-type AltSync interface {
+type AltSync interface { // ??
 	// RequestL2Range informs the sync source that the given range of L2 blocks is missing,
 	// and should be retrieved from any available alternative syncing source.
 	// The start and end of the range are exclusive:

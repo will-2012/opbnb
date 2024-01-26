@@ -41,7 +41,7 @@ func (ds *DataSourceFactory) OpenData(ctx context.Context, id eth.BlockID, batch
 	return NewDataSource(ctx, ds.log, ds.cfg, ds.fetcher, id, batcherAddr)
 }
 
-// DataSource is a fault tolerant approach to fetching data.
+// DataSource is a fault-tolerant approach to fetching data.
 // The constructor will never fail & it will instead re-attempt the fetcher
 // at a later point.
 type DataSource struct {

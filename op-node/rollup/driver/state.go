@@ -22,7 +22,7 @@ import (
 // Deprecated: use eth.SyncStatus instead.
 type SyncStatus = eth.SyncStatus
 
-// sealingDuration defines the expected time it takes to seal the block
+// sealingDuration defines the expected time it takes to seal the block ??
 const sealingDuration = time.Millisecond * 1
 
 type Driver struct {
@@ -85,7 +85,7 @@ type Driver struct {
 
 	metrics     Metrics
 	log         log.Logger
-	snapshotLog log.Logger
+	snapshotLog log.Logger // ??
 	done        chan struct{}
 
 	wg gosync.WaitGroup
@@ -125,7 +125,7 @@ func (s *Driver) Close() error {
 
 // OnL1Head signals the driver that the L1 chain changed the "unsafe" block,
 // also known as head of the chain, or "latest".
-func (s *Driver) OnL1Head(ctx context.Context, unsafe eth.L1BlockRef) error {
+func (s *Driver) OnL1Head(ctx context.Context, unsafe eth.L1BlockRef) error { // TODO
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -164,18 +164,25 @@ func (s *Driver) OnUnsafeL2Payload(ctx context.Context, payload *eth.ExecutionPa
 }
 
 // the eventLoop responds to L1 changes and internal timers to produce L2 blocks.
+// thread safe actor model??
 func (s *Driver) eventLoop() {
+	// event loop trigger
+	var (
+		// stepReqCh is used to request that the driver attempts to step forward by one L1 block.
+		stepReqCh = make(chan struct{}, 1)
+
+		// channel, nil by default (not firing), but used to schedule re-attempts with delay
+		delayedStepReq <-chan time.Time
+
+		// sequencer action
+		sequencerCh <-chan time.Time
+	)
+
 	defer s.wg.Done()
 	s.log.Info("State loop started")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	// stepReqCh is used to request that the driver attempts to step forward by one L1 block.
-	stepReqCh := make(chan struct{}, 1)
-
-	// channel, nil by default (not firing), but used to schedule re-attempts with delay
-	var delayedStepReq <-chan time.Time
 
 	// keep track of consecutive failed attempts, to adjust the backoff time accordingly
 	bOffStrategy := backoff.Exponential()
@@ -187,6 +194,7 @@ func (s *Driver) eventLoop() {
 		case stepReqCh <- struct{}{}:
 		// Don't deadlock if the channel is already full
 		default:
+			// nonblock
 		}
 	}
 
@@ -212,7 +220,6 @@ func (s *Driver) eventLoop() {
 	reqStep()
 
 	sequencerTimer := time.NewTimer(0)
-	var sequencerCh <-chan time.Time
 	planSequencerAction := func() {
 		delay := s.sequencer.PlanNextSequencerAction()
 		sequencerCh = sequencerTimer.C
@@ -302,7 +309,7 @@ func (s *Driver) eventLoop() {
 		// Following cases are high priority
 		if s.driverConfig.SequencerPriority {
 			select {
-			case <-sequencerCh:
+			case <-sequencerCh: // TODO
 				if err := sequencerStep(); err != nil {
 					return
 				}
@@ -348,7 +355,7 @@ func (s *Driver) eventLoop() {
 				s.log.Warn("failed to check for unsafe L2 blocks to sync", "err", err)
 			}
 		case payload := <-s.unsafeL2Payloads:
-			s.snapshot("New unsafe payload")
+			s.snapshot("New unsafe payload") // ??
 			s.log.Info("Optimistically queueing unsafe L2 execution payload", "id", payload.ID())
 			s.derivation.AddUnsafePayload(payload)
 			s.metrics.RecordReceivedUnsafePayload(payload)
@@ -363,10 +370,10 @@ func (s *Driver) eventLoop() {
 			s.l1State.HandleNewL1FinalizedBlock(newL1Finalized)
 			s.derivation.Finalize(newL1Finalized)
 			reqStep() // we may be able to mark more L2 data as finalized now
-		case <-delayedStepReq:
+		case <-delayedStepReq: // retry
 			delayedStepReq = nil
 			step()
-		case <-stepReqCh:
+		case <-stepReqCh: // TODO
 			s.metrics.SetDerivationIdle(false)
 			s.log.Debug("Derivation process step", "onto_origin", s.derivation.Origin(), "attempts", stepAttempts)
 			err := s.derivation.Step(context.Background())

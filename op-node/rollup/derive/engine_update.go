@@ -127,7 +127,7 @@ func ConfirmPayload(ctx context.Context, log log.Logger, eng Engine, fc eth.Fork
 		return nil, BlockInsertPayloadErr, err
 	}
 
-	status, err := eng.NewPayload(ctx, payload)
+	status, err := eng.NewPayload(ctx, payload) // rpc op-geth
 	if err != nil {
 		return nil, BlockInsertTemporaryErr, fmt.Errorf("failed to insert execution payload: %w", err)
 	}

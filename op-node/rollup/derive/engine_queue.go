@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 )
 
+// impl
 type attributesWithParent struct {
 	attributes *eth.PayloadAttributes
 	parent     eth.L2BlockRef
@@ -40,9 +41,9 @@ type Engine interface {
 
 // EngineState provides a read-only interface of the forkchoice state properties of the L2 Engine.
 type EngineState interface {
-	Finalized() eth.L2BlockRef
 	UnsafeL2Head() eth.L2BlockRef
 	SafeL2Head() eth.L2BlockRef
+	Finalized() eth.L2BlockRef
 }
 
 // EngineControl enables other components to build blocks with the Engine,
@@ -59,12 +60,12 @@ type EngineControl interface {
 	// CancelPayload requests the engine to stop building the current block without making it canonical.
 	// This is optional, as the engine expires building jobs that are left uncompleted, but can still save resources.
 	CancelPayload(ctx context.Context, force bool) error
-	// BuildingPayload indicates if a payload is being built, and onto which block it is being built, and whether or not it is a safe payload.
+	// BuildingPayload indicates if a payload is being built, and onto which block it is being built, and whether it is a safe payload.
 	BuildingPayload() (onto eth.L2BlockRef, id eth.PayloadID, safe bool)
 }
 
 // Max memory used for buffering unsafe payloads
-const maxUnsafePayloadsMemory = 500 * 1024 * 1024
+const maxUnsafePayloadsMemory = 500 * 1024 * 1024 // 500MiB
 
 // finalityLookback defines the amount of L1<>L2 relations to track for finalization purposes, one per L1 block.
 //
@@ -79,7 +80,7 @@ const maxUnsafePayloadsMemory = 500 * 1024 * 1024
 // The beacon chain on mainnet has 32 slots per epoch,
 // and new finalization events happen at most 4 epochs behind the head.
 // And then we add 1 to make pruning easier by leaving room for a new item without pruning the 32*4.
-const finalityLookback = 4*32 + 1
+const finalityLookback = 4*32 + 1 // 129
 
 // finalityDelay is the number of L1 blocks to traverse before trying to finalize L2 blocks again.
 // We do not want to do this too often, since it requires fetching a L1 block by number, so no cache data.
@@ -130,7 +131,7 @@ type EngineQueue struct {
 	finalityData []FinalityData
 
 	engine Engine
-	prev   NextAttributesProvider
+	prev   NextAttributesProvider // ??
 
 	origin eth.L1BlockRef   // updated on resets, and whenever we read from the previous stage.
 	sysCfg eth.SystemConfig // only used for pipeline resets
@@ -148,7 +149,7 @@ func NewEngineQueue(log log.Logger, cfg *rollup.Config, engine Engine, metrics M
 	return &EngineQueue{
 		log:            log,
 		cfg:            cfg,
-		engine:         engine,
+		engine:         engine, // ??
 		metrics:        metrics,
 		finalityData:   make([]FinalityData, 0, finalityLookback),
 		unsafePayloads: NewPayloadsQueue(maxUnsafePayloadsMemory, payloadMemSize),
@@ -192,8 +193,9 @@ func (eq *EngineQueue) AddUnsafePayload(payload *eth.ExecutionPayload) {
 }
 
 func (eq *EngineQueue) Finalize(l1Origin eth.L1BlockRef) {
-	if l1Origin.Number < eq.finalizedL1.Number {
-		eq.log.Error("ignoring old L1 finalized block signal! Is the L1 provider corrupted?", "prev_finalized_l1", eq.finalizedL1, "signaled_finalized_l1", l1Origin)
+	prevFinalizedL1 := eq.finalizedL1
+	if l1Origin.Number < prevFinalizedL1.Number {
+		eq.log.Error("ignoring old L1 finalized block signal! Is the L1 provider corrupted?", "prev_finalized_l1", prevFinalizedL1, "signaled_finalized_l1", l1Origin)
 		return
 	}
 
@@ -212,7 +214,7 @@ func (eq *EngineQueue) Finalize(l1Origin eth.L1BlockRef) {
 		}
 	}
 
-	eq.log.Info("received L1 finality signal, but missing data for immediate L2 finalization", "prev_finalized_l1", eq.finalizedL1, "signaled_finalized_l1", l1Origin)
+	eq.log.Info("received L1 finality signal, but missing data for immediate L2 finalization", "prev_finalized_l1", prevFinalizedL1, "signaled_finalized_l1", l1Origin)
 }
 
 // FinalizedL1 identifies the L1 chain (incl.) that included and/or produced all the finalized L2 blocks.
@@ -254,6 +256,7 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 		}
 		// EOF error means we can't process the next unsafe payload. Then we should process next safe attributes.
 	}
+
 	if eq.isEngineSyncing() {
 		// Make pipeline first focus to sync unsafe blocks to engineSyncTarget
 		return EngineP2PSyncing
@@ -371,7 +374,7 @@ func (eq *EngineQueue) tryFinalizeL2() {
 	for _, fd := range eq.finalityData {
 		if fd.L2Block.Number > finalizedL2.Number && fd.L1Block.Number <= eq.finalizedL1.Number {
 			finalizedL2 = fd.L2Block
-			eq.needForkchoiceUpdate = true
+			eq.needForkchoiceUpdate = true // TODO
 		}
 	}
 	eq.finalized = finalizedL2
@@ -466,6 +469,7 @@ func (eq *EngineQueue) checkForkchoiceUpdatedStatus(status eth.ExecutePayloadSta
 	return status == eth.ExecutionValid
 }
 
+// TODO
 func (eq *EngineQueue) tryNextUnsafePayload(ctx context.Context) error {
 	first := eq.unsafePayloads.Peek()
 
@@ -476,13 +480,15 @@ func (eq *EngineQueue) tryNextUnsafePayload(ctx context.Context) error {
 	}
 
 	// Ensure that the unsafe payload builds upon the current unsafe head
-	if !eq.syncCfg.EngineSync && first.ParentHash != eq.unsafeHead.Hash {
+	if !eq.syncCfg.EngineSync && first.ParentHash != eq.unsafeHead.Hash { // --->
 		if uint64(first.BlockNumber) == eq.unsafeHead.Number+1 {
 			eq.log.Info("skipping unsafe payload, since it does not build onto the existing unsafe chain", "safe", eq.safeHead.ID(), "unsafe", first.ID(), "payload", first.ID())
 			eq.unsafePayloads.Pop()
 		}
 		return io.EOF // time to go to next stage if we cannot process the first unsafe payload
 	}
+
+	// engine sync or first.parenthash == eq.unsafehead.hash
 
 	ref, err := PayloadToBlockRef(first, &eq.cfg.Genesis)
 	if err != nil {
@@ -503,7 +509,7 @@ func (eq *EngineQueue) tryNextUnsafePayload(ctx context.Context) error {
 
 	// Mark the new payload as valid
 	fc := eth.ForkchoiceState{
-		HeadBlockHash:      first.BlockHash,
+		HeadBlockHash:      first.BlockHash,  // update
 		SafeBlockHash:      eq.safeHead.Hash, // this should guarantee we do not reorg past the safe head
 		FinalizedBlockHash: eq.finalized.Hash,
 	}
@@ -600,7 +606,7 @@ func (eq *EngineQueue) consolidateNextSafeAttributes(ctx context.Context) error 
 		return NewResetError(fmt.Errorf("failed to decode L2 block ref from payload: %w", err))
 	}
 	eq.safeHead = ref
-	eq.needForkchoiceUpdate = true
+	eq.needForkchoiceUpdate = true // TODO
 	eq.metrics.RecordL2Ref("l2_safe", ref)
 	// unsafe head stays the same, we did not reorg the chain.
 	eq.safeAttributes = nil
@@ -747,7 +753,7 @@ func (eq *EngineQueue) resetBuildingState() {
 	eq.buildingSafe = false
 }
 
-// ResetStep Walks the L2 chain backwards until it finds an L2 block whose L1 origin is canonical.
+// Reset Walks the L2 chain backwards until it finds an L2 block whose L1 origin is canonical.
 // The unsafe head is set to the head of the L2 chain, unless the existing safe head is not canonical.
 func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.SystemConfig) error {
 	result, err := sync.FindL2Heads(ctx, eq.cfg, eq.l1Fetcher, eq.engine, eq.log, eq.syncCfg)

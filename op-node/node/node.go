@@ -26,19 +26,21 @@ type OpNode struct {
 	appVersion string
 	metrics    *metrics.Metrics
 
+	// L1
+	l1Source       *sources.L1Client     // L1 Client to fetch data from
 	l1HeadsSub     ethereum.Subscription // Subscription to get L1 heads (automatically re-subscribes on error)
 	l1SafeSub      ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
-	l1FinalizedSub ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
+	l1FinalizedSub ethereum.Subscription // Subscription to get L1 finalized blocks, a.k.a. justified data (polling)
 
-	l1Source  *sources.L1Client     // L1 Client to fetch data from
-	l2Driver  *driver.Driver        // L2 Engine to Sync
-	l2Source  *sources.EngineClient // L2 Execution Engine RPC bindings
-	rpcSync   *sources.SyncClient   // Alt-sync RPC client, optional (may be nil)
-	server    *rpcServer            // RPC server hosting the rollup-node API
-	p2pNode   *p2p.NodeP2P          // P2P node functionality
-	p2pSigner p2p.Signer            // p2p gogssip application messages will be signed with this signer
-	tracer    Tracer                // tracer to get events for testing/debugging
-	runCfg    *RuntimeConfig        // runtime configurables
+	l2Source *sources.EngineClient // L2 Execution Engine RPC bindings
+	l2Driver *driver.Driver        // L2 Engine to Sync
+
+	rpcSync   *sources.SyncClient // Alt-sync RPC client, optional (may be nil) Alt=auto
+	server    *rpcServer          // RPC server hosting the rollup-node API
+	p2pNode   *p2p.NodeP2P        // P2P node functionality
+	p2pSigner p2p.Signer          // p2p gogssip application messages will be signed with this signer
+	tracer    Tracer              // tracer to get events for testing/debugging
+	runCfg    *RuntimeConfig      // runtime configurables
 
 	// some resources cannot be stopped directly, like the p2p gossipsub router (not our design),
 	// and depend on this ctx to be closed.
@@ -219,7 +221,7 @@ func (n *OpNode) initRPCSync(ctx context.Context, cfg *Config) error {
 	if rpcSyncClient == nil { // if no RPC client is configured to sync from, then don't add the RPC sync client
 		return nil
 	}
-	syncClient, err := sources.NewSyncClient(n.OnUnsafeL2Payload, rpcSyncClient, n.log, n.metrics.L2SourceCache, rpcCfg)
+	syncClient, err := sources.NewSyncClient(n.OnUnsafeL2Payload, rpcSyncClient, n.log, n.metrics.L2SourceCache, rpcCfg) // TODO
 	if err != nil {
 		return fmt.Errorf("failed to create sync client: %w", err)
 	}

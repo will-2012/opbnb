@@ -29,20 +29,10 @@ var (
 		Value:  "http://127.0.0.1:8545",
 		EnvVar: prefixEnvVar("L1_ETH_RPC"),
 	}
-	L2EngineAddr = cli.StringFlag{
+	L2EngineAddr = cli.StringFlag{ // op-geth authrpc.port
 		Name:   "l2",
 		Usage:  "Address of L2 Engine JSON-RPC endpoints to use (engine and eth namespace required)",
 		EnvVar: prefixEnvVar("L2_ENGINE_RPC"),
-	}
-	RollupConfig = cli.StringFlag{
-		Name:   "rollup.config",
-		Usage:  "Rollup chain parameters",
-		EnvVar: prefixEnvVar("ROLLUP_CONFIG"),
-	}
-	Network = cli.StringFlag{
-		Name:   "network",
-		Usage:  fmt.Sprintf("Predefined network selection. Available networks: %s", strings.Join(chaincfg.AvailableNetworks(), ", ")),
-		EnvVar: prefixEnvVar("NETWORK"),
 	}
 	RPCListenAddr = cli.StringFlag{
 		Name:   "rpc.addr",
@@ -53,6 +43,18 @@ var (
 		Name:   "rpc.port",
 		Usage:  "RPC listening port",
 		EnvVar: prefixEnvVar("RPC_PORT"),
+	}
+
+	//
+	RollupConfig = cli.StringFlag{
+		Name:   "rollup.config",
+		Usage:  "Rollup chain parameters",
+		EnvVar: prefixEnvVar("ROLLUP_CONFIG"),
+	}
+	Network = cli.StringFlag{
+		Name:   "network",
+		Usage:  fmt.Sprintf("Predefined network selection. Available networks: %s", strings.Join(chaincfg.AvailableNetworks(), ", ")),
+		EnvVar: prefixEnvVar("NETWORK"),
 	}
 	RPCEnableAdmin = cli.BoolFlag{
 		Name:   "rpc.enable-admin",
@@ -107,7 +109,7 @@ var (
 		Value:       "",
 		Destination: new(string),
 	}
-	VerifierL1Confs = cli.Uint64Flag{
+	VerifierL1Confs = cli.Uint64Flag{ //
 		Name:     "verifier.l1-confs",
 		Usage:    "Number of L1 blocks to keep distance from the L1 head before deriving L2 data from. Reorgs are supported, but may be slow to perform.",
 		EnvVar:   prefixEnvVar("VERIFIER_L1_CONFS"),
@@ -119,25 +121,25 @@ var (
 		Usage:  "Enable sequencing of new L2 blocks. A separate batch submitter has to be deployed to publish the data for verifiers.",
 		EnvVar: prefixEnvVar("SEQUENCER_ENABLED"),
 	}
-	SequencerStoppedFlag = cli.BoolFlag{
+	SequencerStoppedFlag = cli.BoolFlag{ // ??
 		Name:   "sequencer.stopped",
 		Usage:  "Initialize the sequencer in a stopped state. The sequencer can be started using the admin_startSequencer RPC",
 		EnvVar: prefixEnvVar("SEQUENCER_STOPPED"),
 	}
-	SequencerMaxSafeLagFlag = cli.Uint64Flag{
+	SequencerMaxSafeLagFlag = cli.Uint64Flag{ //
 		Name:     "sequencer.max-safe-lag",
 		Usage:    "Maximum number of L2 blocks for restricting the distance between L2 safe and unsafe. Disabled if 0.",
 		EnvVar:   prefixEnvVar("SEQUENCER_MAX_SAFE_LAG"),
 		Required: false,
 		Value:    0,
 	}
-	SequencerPriorityFlag = cli.BoolFlag{
+	SequencerPriorityFlag = cli.BoolFlag{ //
 		Name:     "sequencer.priority",
 		Usage:    "Enable sequencer step takes precedence over other steps.",
 		EnvVar:   prefixEnvVar("SEQUENCER_PRIORITY"),
 		Required: false,
 	}
-	SequencerL1Confs = cli.Uint64Flag{
+	SequencerL1Confs = cli.Uint64Flag{ // ??
 		Name:     "sequencer.l1-confs",
 		Usage:    "Number of L1 blocks to keep distance from the L1 head as a sequencer for picking an L1 origin.",
 		EnvVar:   prefixEnvVar("SEQUENCER_L1_CONFS"),

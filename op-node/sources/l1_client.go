@@ -58,13 +58,13 @@ type L1Client struct {
 	// common.Hash -> eth.L1BlockRef
 	l1BlockRefsCache *caching.LRUCache
 
-	//ensure pre-fetch receipts only once
+	// ensure pre-fetch receipts only once
 	preFetchReceiptsOnce sync.Once
-	//start block for pre-fetch receipts
+	// start block for pre-fetch receipts
 	preFetchReceiptsStartBlockChan chan uint64
-	//max concurrent requests
+	// max concurrent requests
 	maxConcurrentRequests int
-	//done chan
+	// done chan
 	done chan struct{}
 }
 
