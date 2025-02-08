@@ -49,7 +49,7 @@ type OpNode struct {
 
 	l1HeadsSub     ethereum.Subscription // Subscription to get L1 heads (automatically re-subscribes on error)
 	l1SafeSub      ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
-	l1FinalizedSub ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
+	l1FinalizedSub ethereum.Subscription // Subscription to get L1 finalized blocks, a.k.a. justified data (polling)
 
 	l1Source  *sources.L1Client     // L1 Client to fetch data from
 	l2Driver  *driver.Driver        // L2 Engine to Sync
@@ -353,6 +353,7 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 		sequencerConductor = NewConductorClient(cfg, n.log, n.metrics)
 	}
 
+	// TODO: ??
 	// if plasma is not explicitly activated in the node CLI, the config + any error will be ignored.
 	rpCfg, err := cfg.Rollup.GetOPPlasmaConfig()
 	if cfg.Plasma.Enabled && err != nil {
@@ -369,6 +370,7 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 	} else {
 		n.safeDB = safedb.Disabled
 	}
+	//
 	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.l1Blob, n, n, n.log, snapshotLog, n.metrics, cfg.ConfigPersistence, n.safeDB, &cfg.Sync, sequencerConductor, plasmaDA)
 	return nil
 }

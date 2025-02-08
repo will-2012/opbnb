@@ -180,6 +180,7 @@ func (eq *EngineQueue) isEngineSyncing() bool {
 	return eq.ec.IsEngineSyncing()
 }
 
+// Step TODO: look into it.
 func (eq *EngineQueue) Step(ctx context.Context) error {
 	// If we don't need to call FCU to restore unsafeHead using backupUnsafe, keep going b/c
 	// this was a no-op(except correcting invalid state when backupUnsafe is empty but TryBackupUnsafeReorg called).
@@ -269,8 +270,9 @@ func (eq *EngineQueue) verifyNewL1Origin(ctx context.Context, newOrigin eth.L1Bl
 
 // Reset walks the L2 chain backwards until it finds an L2 block whose L1 origin is canonical.
 // The unsafe head is set to the head of the L2 chain, unless the existing safe head is not canonical.
+// TODO: look into it.
 func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.SystemConfig) error {
-	result, err := sync.FindL2Heads(ctx, eq.cfg, eq.l1Fetcher, eq.engine, eq.log, eq.syncCfg)
+	result, err := sync.FindL2Heads(ctx, eq.cfg, eq.l1Fetcher, eq.engine /*l2*/, eq.log, eq.syncCfg)
 	if err != nil {
 		return NewTemporaryError(fmt.Errorf("failed to find the L2 Heads to start from: %w", err))
 	}
@@ -348,5 +350,5 @@ func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.System
 			return err
 		}
 	}
-	return io.EOF
+	return io.EOF // succeed is eof
 }

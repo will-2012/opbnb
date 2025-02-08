@@ -125,6 +125,7 @@ func (s *Driver) Start() error {
 
 	log.Info("Starting driver", "sequencerEnabled", s.driverConfig.SequencerEnabled, "sequencerStopped", s.driverConfig.SequencerStopped)
 	if s.driverConfig.SequencerEnabled {
+		// 在enable时，持久化sequencer start/stop状态到配置文件
 		// Notify the initial sequencer state
 		// This ensures persistence can write the state correctly and that the state file exists
 		var err error
@@ -507,6 +508,7 @@ func (s *Driver) eventLoop() {
 	}
 }
 
+// 名字很奇怪？？怎么理解语义？？
 func (s *Driver) syncStep(ctx context.Context) error {
 	// If we don't need to call FCU to restore unsafeHead using backupUnsafe, keep going b/c
 	// this was a no-op(except correcting invalid state when backupUnsafe is empty but TryBackupUnsafeReorg called).

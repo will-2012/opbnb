@@ -92,7 +92,7 @@ func (l1t *L1Traversal) Reset(ctx context.Context, base eth.L1BlockRef, cfg eth.
 	l1t.done = false
 	l1t.sysCfg = cfg
 	l1t.log.Info("completed reset of derivation pipeline", "origin", base)
-	return io.EOF
+	return io.EOF //
 }
 
 func (l1c *L1Traversal) SystemConfig() eth.SystemConfig {
