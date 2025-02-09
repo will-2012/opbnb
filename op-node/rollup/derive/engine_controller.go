@@ -67,18 +67,20 @@ type EngineController struct {
 	clock        clock.Clock
 
 	// Block Head State
-	unsafeHead       eth.L2BlockRef
-	pendingSafeHead  eth.L2BlockRef // L2 block processed from the middle of a span batch, but not marked as the safe block yet.
-	safeHead         eth.L2BlockRef
-	finalizedHead    eth.L2BlockRef
+	unsafeHead      eth.L2BlockRef
+	pendingSafeHead eth.L2BlockRef // L2 block processed from the middle of a span batch, but not marked as the safe block yet.
+	safeHead        eth.L2BlockRef
+	finalizedHead   eth.L2BlockRef
+
+	needFCUCall bool
+	// 下面两个是一组
 	backupUnsafeHead eth.L2BlockRef
-	needFCUCall      bool
 	// Track when the rollup node changes the forkchoice to restore previous
 	// known unsafe chain. e.g. Unsafe Reorg caused by Invalid span batch.
 	// This update does not retry except engine returns non-input error
 	// because engine may forgot backupUnsafeHead or backupUnsafeHead is not part
 	// of the chain.
-	needFCUCallForBackupUnsafeReorg bool
+	needFCUCallForBackupUnsafeReorg bool // 什么语义。。没懂
 
 	// Building State
 	buildingOnto eth.L2BlockRef
@@ -89,7 +91,13 @@ type EngineController struct {
 	combinedAPI bool
 }
 
-func NewEngineController(engine ExecEngine, log log.Logger, metrics Metrics, rollupCfg *rollup.Config, syncConfig *sync.Config, combinedAPI bool) *EngineController {
+func NewEngineController(
+	engine ExecEngine,
+	log log.Logger,
+	metrics Metrics,
+	rollupCfg *rollup.Config,
+	syncConfig *sync.Config,
+	combinedAPI bool) *EngineController {
 	syncStatus := syncStatusCL
 	if syncConfig.SyncMode == sync.ELSync {
 		syncStatus = syncStatusWillStartEL
@@ -102,7 +110,7 @@ func NewEngineController(engine ExecEngine, log log.Logger, metrics Metrics, rol
 		chainSpec:    rollup.NewChainSpec(rollupCfg),
 		rollupCfg:    rollupCfg,
 		syncMode:     syncConfig.SyncMode,
-		elTriggerGap: syncConfig.ELTriggerGap,
+		elTriggerGap: syncConfig.ELTriggerGap, // engine layer
 		syncStatus:   syncStatus,
 		clock:        clock.SystemClock,
 		combinedAPI:  combinedAPI,
@@ -166,14 +174,15 @@ func (e *EngineController) SetUnsafeHead(r eth.L2BlockRef) {
 	e.metrics.RecordL2Ref("l2_unsafe", r)
 	e.unsafeHead = r
 	e.needFCUCall = true
-	e.chainSpec.CheckForkActivation(e.log, r)
+	e.chainSpec.CheckForkActivation(e.log, r) // just for fork logging??
 }
 
 // SetBackupUnsafeL2Head implements LocalEngineControl.
+// 关注什么时候被调用，reorg？？
 func (e *EngineController) SetBackupUnsafeL2Head(r eth.L2BlockRef, triggerReorg bool) {
 	e.metrics.RecordL2Ref("l2_backup_unsafe", r)
 	e.backupUnsafeHead = r
-	e.needFCUCallForBackupUnsafeReorg = triggerReorg
+	e.needFCUCallForBackupUnsafeReorg = triggerReorg // to reorg？？
 }
 
 // logSyncProgressMaybe helps log forkchoice state-changes when applicable.
@@ -222,13 +231,18 @@ func (e *EngineController) logSyncProgressMaybe() func() {
 
 // Engine Methods
 
-func (e *EngineController) StartPayload(ctx context.Context, parent eth.L2BlockRef, attrs *AttributesWithParent, updateSafe bool) (errType BlockInsertionErrType, err error) {
-	if e.IsEngineSyncing() {
+func (e *EngineController) StartPayload(
+	ctx context.Context,
+	parent eth.L2BlockRef,
+	attrs *AttributesWithParent,
+	updateSafe bool) (errType BlockInsertionErrType, err error) {
+	if e.IsEngineSyncing() { // 检测同步状态，如果正在同步，返回错误；关注上层如何重试？？
 		return BlockInsertTemporaryErr, fmt.Errorf("engine is in progess of p2p sync")
 	}
 	if e.buildingInfo != (eth.PayloadInfo{}) {
 		e.log.Warn("did not finish previous block building, starting new building now", "prev_onto", e.buildingOnto, "prev_payload_id", e.buildingInfo.ID, "new_onto", parent)
 		// TODO(8841): maybe worth it to force-cancel the old payload ID here.
+		// 这种情况会如何？？
 	}
 	fc := eth.ForkchoiceState{
 		HeadBlockHash:      parent.Hash,
@@ -245,13 +259,16 @@ func (e *EngineController) StartPayload(ctx context.Context, parent eth.L2BlockR
 	e.buildingSafe = updateSafe
 	e.buildingOnto = parent
 	if updateSafe {
-		e.safeAttrs = attrs
+		e.safeAttrs = attrs //
 	}
 
 	return BlockInsertOK, nil
 }
 
-func (e *EngineController) ConfirmPayload(ctx context.Context, agossip async.AsyncGossiper, sequencerConductor conductor.SequencerConductor) (out *eth.ExecutionPayloadEnvelope, errTyp BlockInsertionErrType, err error) {
+func (e *EngineController) ConfirmPayload(
+	ctx context.Context,
+	agossip async.AsyncGossiper,
+	sequencerConductor conductor.SequencerConductor) (out *eth.ExecutionPayloadEnvelope, errTyp BlockInsertionErrType, err error) {
 	// don't create a BlockInsertPrestateErr if we have a cached gossip payload
 	if e.buildingInfo == (eth.PayloadInfo{}) && agossip.Get() == nil {
 		return nil, BlockInsertPrestateErr, fmt.Errorf("cannot complete payload building: not currently building a payload")
@@ -276,7 +293,8 @@ func (e *EngineController) ConfirmPayload(ctx context.Context, agossip async.Asy
 	if e.combinedAPI && !e.buildingSafe {
 		envelope, errTyp, err = confirmPayloadCombined(ctx, e.log, e.engine, fc, e.buildingInfo, updateSafe, agossip, sequencerConductor, e.metrics)
 	} else {
-		envelope, errTyp, err = confirmPayload(ctx, e.log, e.engine, fc, e.buildingInfo, updateSafe, agossip, sequencerConductor, e.metrics)
+		// util
+		envelope, errTyp, err = confirmPayload(ctx, e.log, e.engine /*l2 都当参数传进去了*/, fc, e.buildingInfo, updateSafe, agossip, sequencerConductor, e.metrics)
 	}
 	if err != nil {
 		return nil, errTyp, fmt.Errorf("failed to complete building on top of L2 chain %s, id: %s, error (%d): %w", e.buildingOnto, e.buildingInfo.ID, errTyp, err)
@@ -591,7 +609,7 @@ func (e *EngineController) TryBackupUnsafeReorg(ctx context.Context) (bool, erro
 	// Reorg unsafe chain. Safe/Finalized chain will not be updated.
 	e.log.Warn("trying to restore unsafe head", "backupUnsafe", e.backupUnsafeHead.ID(), "unsafe", e.unsafeHead.ID())
 	fc := eth.ForkchoiceState{
-		HeadBlockHash:      e.backupUnsafeHead.Hash,
+		HeadBlockHash:      e.backupUnsafeHead.Hash, // backup这里？
 		SafeBlockHash:      e.safeHead.Hash,
 		FinalizedBlockHash: e.finalizedHead.Hash,
 	}

@@ -126,6 +126,7 @@ func (eq *AttributesHandler) consolidateNextSafeAttributes(ctx context.Context, 
 		// geth cannot wind back a chain without reorging to a new, previously non-canonical, block
 		return eq.forceNextSafeAttributes(ctx, attributes)
 	}
+	// 下一个l2 block ref
 	ref, err := derive.PayloadToBlockRef(eq.cfg, envelope.ExecutionPayload)
 	if err != nil {
 		return derive.NewResetError(fmt.Errorf("failed to decode L2 block ref from payload: %w", err))

@@ -127,7 +127,7 @@ type EngineQueue struct {
 	attributesHandler AttributesHandler
 
 	engine L2Source
-	prev   NextAttributesProvider
+	prev   NextAttributesProvider // 不断的迭代生成新的attribute
 
 	origin eth.L1BlockRef   // updated on resets, and whenever we read from the previous stage.
 	sysCfg eth.SystemConfig // only used for pipeline resets
@@ -137,7 +137,7 @@ type EngineQueue struct {
 
 	syncCfg *sync.Config
 
-	safeHeadNotifs       SafeHeadListener // notified when safe head is updated
+	safeHeadNotifs       SafeHeadListener // notified when safe head is updated  是数据库？？干嘛用的？？貌似没用被用到
 	lastNotifiedSafeHead eth.L2BlockRef
 
 	finalizer FinalizerHooks
