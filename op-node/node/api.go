@@ -22,16 +22,16 @@ type l2EthClient interface {
 	// GetProof returns a proof of the account, it may return a nil result without error if the address was not found.
 	// Optionally keys of the account storage trie can be specified to include with corresponding values in the proof.
 	GetProof(ctx context.Context, address common.Address, storage []common.Hash, blockTag string) (*eth.AccountResult, error)
-	OutputV0AtBlock(ctx context.Context, blockHash common.Hash) (*eth.OutputV0, error)
+	OutputV0AtBlock(ctx context.Context, blockHash common.Hash) (*eth.OutputV0, error) // op proposer使用？？
 }
 
 type driverClient interface {
-	SyncStatus(ctx context.Context) (*eth.SyncStatus, error)
+	SyncStatus(ctx context.Context) (*eth.SyncStatus, error) // 所有的状态数据
 	BlockRefWithStatus(ctx context.Context, num uint64) (eth.L2BlockRef, *eth.SyncStatus, error)
 	ResetDerivationPipeline(context.Context) error
 	StartSequencer(ctx context.Context, blockHash common.Hash) error
 	StopSequencer(context.Context) (common.Hash, error)
-	SequencerActive(context.Context) (bool, error)
+	SequencerActive(context.Context) (bool, error) // sequencer是否正常跑着呢
 	OnUnsafeL2Payload(ctx context.Context, payload *eth.ExecutionPayloadEnvelope) error
 }
 

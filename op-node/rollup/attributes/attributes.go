@@ -87,7 +87,7 @@ func (eq *AttributesHandler) Proceed(ctx context.Context) error {
 			eq.ec.PendingSafeL2Head(), eq.ec.PendingSafeL2Head().ParentID(), eq.attributes.Parent))
 	}
 	if eq.ec.PendingSafeL2Head().Number < eq.ec.UnsafeL2Head().Number {
-		if err := eq.consolidateNextSafeAttributes(ctx, eq.attributes); err != nil {
+		if err := eq.consolidateNextSafeAttributes(ctx, eq.attributes); err != nil { // normal path??
 			return err
 		}
 		eq.attributes = nil
@@ -141,8 +141,10 @@ func (eq *AttributesHandler) consolidateNextSafeAttributes(ctx context.Context, 
 
 // forceNextSafeAttributes inserts the provided attributes, reorging away any conflicting unsafe chain.
 func (eq *AttributesHandler) forceNextSafeAttributes(ctx context.Context, attributes *derive.AttributesWithParent) error {
+	// reorg??
+
 	attrs := attributes.Attributes
-	errType, err := eq.ec.StartPayload(ctx, eq.ec.PendingSafeL2Head(), attributes, true)
+	errType, err := eq.ec.StartPayload(ctx, eq.ec.PendingSafeL2Head(), attributes, true) // safe
 	if err == nil {
 		_, errType, err = eq.ec.ConfirmPayload(ctx, async.NoOpGossiper{}, &conductor.NoOpConductor{})
 	}

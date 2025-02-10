@@ -49,6 +49,7 @@ type Driver struct {
 	engineController *derive.EngineController
 
 	// Requests to block the event loop for synchronous execution to avoid reading an inconsistent state
+	// 阻塞eventloop读内部状态
 	stateReq chan chan struct{}
 
 	// Upon receiving a channel in this channel, the derivation pipeline is forced to be reset.
@@ -474,6 +475,7 @@ func (s *Driver) eventLoop() {
 			if !s.driverConfig.SequencerStopped {
 				resp.err <- ErrSequencerAlreadyStarted
 			} else if !bytes.Equal(unsafeHead[:], resp.hash[:]) {
+				// 需要从unsafe head开始
 				resp.err <- fmt.Errorf("block hash does not match: head %s, received %s", unsafeHead.String(), resp.hash.String())
 			} else {
 				if err := s.sequencerNotifs.SequencerStarted(); err != nil {
@@ -544,6 +546,7 @@ func (s *Driver) ResetDerivationPipeline(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-respCh:
+			// 等待reset结束
 			return nil
 		}
 	}
@@ -570,11 +573,13 @@ func (s *Driver) StartSequencer(ctx context.Context, blockHash common.Hash) erro
 		case <-ctx.Done():
 			return ctx.Err()
 		case e := <-h.err:
+			//
 			return e
 		}
 	}
 }
 
+// StopSequencer 貌似是高可用切换时候用的？？
 func (s *Driver) StopSequencer(ctx context.Context) (common.Hash, error) {
 	if !s.driverConfig.SequencerEnabled {
 		return common.Hash{}, errors.New("sequencer is not enabled")
@@ -593,6 +598,7 @@ func (s *Driver) StopSequencer(ctx context.Context) (common.Hash, error) {
 	}
 }
 
+// SequencerActive sequencer是否是enable并且started
 func (s *Driver) SequencerActive(ctx context.Context) (bool, error) {
 	if !s.driverConfig.SequencerEnabled {
 		return false, nil

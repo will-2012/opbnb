@@ -52,7 +52,13 @@ type Sequencer struct {
 	nextAction time.Time
 }
 
-func NewSequencer(log log.Logger, rollupCfg *rollup.Config, engine derive.EngineControl, attributesBuilder derive.AttributesBuilder, l1OriginSelector L1OriginSelectorIface, metrics SequencerMetrics) *Sequencer {
+func NewSequencer(
+	log log.Logger,
+	rollupCfg *rollup.Config,
+	engine derive.EngineControl,
+	attributesBuilder derive.AttributesBuilder,
+	l1OriginSelector L1OriginSelectorIface,
+	metrics SequencerMetrics) *Sequencer {
 	return &Sequencer{
 		log:              log,
 		rollupCfg:        rollupCfg,
@@ -120,7 +126,7 @@ func (d *Sequencer) StartBuildingBlock(ctx context.Context) error {
 	// Start a payload building process.
 	withParent := &derive.AttributesWithParent{Attributes: attrs, Parent: l2Head, IsLastInSpan: false}
 	start = time.Now()
-	errTyp, err := d.engine.StartPayload(ctx, l2Head, withParent, false)
+	errTyp, err := d.engine.StartPayload(ctx, l2Head, withParent, false) // unsafe
 	if err != nil {
 		return fmt.Errorf("failed to start building on top of L2 chain %s, error (%d): %w", l2Head, errTyp, err)
 	}
@@ -148,7 +154,7 @@ func (d *Sequencer) CancelBuildingBlock(ctx context.Context) {
 
 // PlanNextSequencerAction returns a desired delay till the RunNextSequencerAction call.
 func (d *Sequencer) PlanNextSequencerAction() time.Duration {
-	buildingOnto, buildingID, safe := d.engine.BuildingPayload()
+	buildingOnto, buildingID, safe := d.engine.BuildingPayload() // 什么时候是safe、什么时候是unsafe？？
 	// If the engine is busy building safe blocks (and thus changing the head that we would sync on top of),
 	// then give it time to sync up.
 	if safe {
