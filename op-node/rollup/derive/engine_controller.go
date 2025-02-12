@@ -409,9 +409,9 @@ func (e *EngineController) checkUpdateUnsafeHead(status eth.ExecutePayloadStatus
 // this is a no-op if the nodes already agree on the forkchoice state.
 func (e *EngineController) TryUpdateEngine(ctx context.Context) error {
 	if !e.needFCUCall {
-		return ErrNoFCUNeeded
+		return ErrNoFCUNeeded // 初始值貌似是false
 	}
-	if e.IsEngineSyncing() {
+	if e.IsEngineSyncing() { // 初始是true， exe engine will sync
 		e.log.Warn("Attempting to update forkchoice state while EL syncing")
 	}
 	fc := eth.ForkchoiceState{

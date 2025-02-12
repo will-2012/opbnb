@@ -104,6 +104,7 @@ func currentHeads(ctx context.Context, cfg *rollup.Config, l2 L2Chain) (*FindHea
 // Plausible: meaning that the blockhash of the L2 block's L1 origin
 // (as reported in the L1 Attributes deposit within the L2 block) is not canonical at another height in the L1 chain,
 // and the same holds for all its ancestors.
+// 校验逻辑有点多，将来再仔细看看.
 func FindL2Heads(ctx context.Context, cfg *rollup.Config, l1 L1Chain, l2 L2Chain, lgr log.Logger, syncCfg *Config) (result *FindHeadsResult, err error) {
 	// Fetch current L2 forkchoice state
 	result, err = currentHeads(ctx, cfg, l2)

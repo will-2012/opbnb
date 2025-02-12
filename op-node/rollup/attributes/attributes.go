@@ -87,12 +87,14 @@ func (eq *AttributesHandler) Proceed(ctx context.Context) error {
 			eq.ec.PendingSafeL2Head(), eq.ec.PendingSafeL2Head().ParentID(), eq.attributes.Parent))
 	}
 	if eq.ec.PendingSafeL2Head().Number < eq.ec.UnsafeL2Head().Number {
+		// sequencer
 		if err := eq.consolidateNextSafeAttributes(ctx, eq.attributes); err != nil { // normal path??
 			return err
 		}
 		eq.attributes = nil
 		return nil
 	} else if eq.ec.PendingSafeL2Head().Number == eq.ec.UnsafeL2Head().Number {
+		// verifier
 		if err := eq.forceNextSafeAttributes(ctx, eq.attributes); err != nil {
 			return err
 		}
@@ -133,7 +135,7 @@ func (eq *AttributesHandler) consolidateNextSafeAttributes(ctx context.Context, 
 	}
 	eq.ec.SetPendingSafeL2Head(ref)
 	if attributes.IsLastInSpan {
-		eq.ec.SetSafeHead(ref)
+		eq.ec.SetSafeHead(ref) // 更新safe
 	}
 	// unsafe head stays the same, we did not reorg the chain.
 	return nil
@@ -182,7 +184,7 @@ func (eq *AttributesHandler) forceNextSafeAttributes(ctx context.Context, attrib
 			// the deposit only block fails, this will return the critical error above.
 
 			// Try to restore to previous known unsafe chain.
-			eq.ec.SetBackupUnsafeL2Head(eq.ec.BackupUnsafeL2Head(), true)
+			eq.ec.SetBackupUnsafeL2Head(eq.ec.BackupUnsafeL2Head(), true) // 注意，这个backup true情况
 
 			// drop the payload (by returning no error) without inserting it into the engine
 			return nil

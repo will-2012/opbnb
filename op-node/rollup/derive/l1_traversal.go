@@ -49,6 +49,7 @@ func (l1t *L1Traversal) Origin() eth.L1BlockRef {
 // NextL1Block returns the next block. It does not advance, but it can only be
 // called once before returning io.EOF
 func (l1t *L1Traversal) NextL1Block(_ context.Context) (eth.L1BlockRef, error) {
+	// 仔细看看这段逻辑
 	if !l1t.done {
 		l1t.done = true
 		return l1t.block, nil
@@ -68,6 +69,7 @@ func (l1t *L1Traversal) AdvanceL1Block(ctx context.Context) error {
 		return NewTemporaryError(fmt.Errorf("failed to find L1 block info by number, at origin %s next %d: %w", origin, origin.Number+1, err))
 	}
 	if l1t.block.Hash != nextL1Origin.ParentHash {
+		// 发现L1有reorg？？
 		return NewResetError(fmt.Errorf("detected L1 reorg from %s to %s with conflicting parent %s", l1t.block, nextL1Origin, nextL1Origin.ParentID()))
 	}
 

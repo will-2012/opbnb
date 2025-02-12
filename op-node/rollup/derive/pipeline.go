@@ -84,7 +84,7 @@ func NewDerivationPipeline(log log.Logger, rollupCfg *rollup.Config, l1Fetcher L
 	eng := NewEngineQueue(log, rollupCfg, l2Source, engine, metrics, attributesQueue,
 		l1Fetcher, syncCfg, safeHeadListener, finalizer, attributesHandler)
 
-	// TODO:
+	// TODO: 每个的reset方法都需要好好看看
 	// Reset from engine queue then up from L1 Traversal. The stages do not talk to each other during
 	// the reset, but after the engine queue, this is the order in which the stages could talk to each other.
 	// Note: The engine queue stage is the only reset that can fail.
@@ -126,7 +126,7 @@ func (dp *DerivationPipeline) Origin() eth.L1BlockRef {
 // An error is expected when the underlying source closes.
 // When Step returns nil, it should be called again, to continue the derivation process.
 func (dp *DerivationPipeline) Step(ctx context.Context) error {
-	defer dp.metrics.RecordL1Ref("l1_derived", dp.Origin())
+	defer dp.metrics.RecordL1Ref("l1_derived", dp.Origin()) // 是defer
 
 	// if any stages need to be reset, do that first.
 	if dp.resetting < len(dp.stages) {
