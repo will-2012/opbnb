@@ -26,6 +26,7 @@ func NewL1State(log log.Logger, metrics L1Metrics) *L1State {
 	return &L1State{
 		log:     log,
 		metrics: metrics,
+		// 初始值具体state都是空的
 	}
 }
 

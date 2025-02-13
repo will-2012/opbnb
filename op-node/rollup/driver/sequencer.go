@@ -111,6 +111,7 @@ func (d *Sequencer) StartBuildingBlock(ctx context.Context) error {
 	// empty blocks (other than the L1 info deposit and any user deposits). We handle this by
 	// setting NoTxPool to true, which will cause the Sequencer to not include any transactions
 	// from the transaction pool.
+	// 这个检测没啥用；貌似FindL1Origin就会提前返回错误了。
 	attrs.NoTxPool = uint64(attrs.Timestamp) > l1Origin.Time+d.spec.MaxSequencerDrift(l1Origin.Time)
 
 	// For the Ecotone activation block we shouldn't include any sequencer transactions.
@@ -130,7 +131,7 @@ func (d *Sequencer) StartBuildingBlock(ctx context.Context) error {
 		"origin", l1Origin, "origin_time", l1Origin.Time, "noTxPool", attrs.NoTxPool)
 
 	// Start a payload building process.
-	withParent := &derive.AttributesWithParent{Attributes: attrs, Parent: l2Head, IsLastInSpan: false}
+	withParent := &derive.AttributesWithParent{Attributes: attrs, Parent: l2Head, IsLastInSpan: false /*这个参数有啥用？？*/}
 	start = time.Now()
 	errTyp, err := d.engine.StartPayload(ctx, l2Head, withParent, false) // unsafe
 	if err != nil {
@@ -253,7 +254,7 @@ func (d *Sequencer) BuildingOnto() eth.L2BlockRef {
 // process (as verifier) and sequencing process.
 // Generally it is expected that the latest call interrupts any ongoing work,
 // and the derivation process does not interrupt in the happy case,
-// since it can consolidate previously sequenced blocks by comparing sequenced inputs with derived inputs.
+// since it can consolidate previously sequenced blocks by comparing sequenced inputs with derived inputs. // 理解
 // If the derivation pipeline does force a conflicting block, then an ongoing sequencer task might still finish,
 // but the derivation can continue to reset until the chain is correct.
 // If the engine is currently building safe blocks, then that building is not interrupted, and sequencing is delayed.
@@ -274,7 +275,7 @@ func (d *Sequencer) RunNextSequencerAction(
 			if errors.Is(err, derive.ErrCritical) {
 				return nil, err // bubble up critical errors.
 			} else if errors.Is(err, derive.ErrReset) {
-				d.log.Error("sequencer failed to seal new block, requiring derivation reset", "err", err)
+				d.log.Error("sequencer failed to seal new block, requiring derivation reset", "err", err) // why??
 				d.metrics.RecordSequencerReset()
 				d.nextAction = d.timeNow().Add(time.Second * time.Duration(d.rollupCfg.BlockTime)) // hold off from sequencing for a full block
 				d.CancelBuildingBlock(ctx)

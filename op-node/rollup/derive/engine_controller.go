@@ -307,7 +307,7 @@ func (e *EngineController) ConfirmPayload(
 	if e.unsafeHead.Number >= ref.Number {
 		e.SetBackupUnsafeL2Head(e.unsafeHead, false)
 	}
-	e.unsafeHead = ref
+	e.unsafeHead = ref // sequencer update unsafe head
 
 	e.metrics.RecordL2Ref("l2_unsafe", ref)
 	if e.buildingSafe {

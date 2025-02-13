@@ -500,7 +500,7 @@ func (n *OpNode) OnNewL1Head(ctx context.Context, sig eth.L1BlockRef) {
 	// Pass on the event to the L2 Engine
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
-	if err := n.l2Driver.OnL1Head(ctx, sig); err != nil {
+	if err := n.l2Driver.OnL1Head(ctx, sig); err != nil { // 什么情况会失败？？
 		n.log.Warn("failed to notify engine driver of L1 head change", "err", err)
 	}
 }

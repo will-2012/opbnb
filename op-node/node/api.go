@@ -137,6 +137,7 @@ func (n *nodeAPI) OutputAtBlock(ctx context.Context, number hexutil.Uint64) (*et
 func (n *nodeAPI) SafeHeadAtL1Block(ctx context.Context, number hexutil.Uint64) (*eth.SafeHeadResponse, error) {
 	recordDur := n.m.RecordRPCServerRequest("optimism_safeHeadAtL1Block")
 	defer recordDur()
+
 	l1Block, safeHead, err := n.safeDB.SafeHeadAtL1(ctx, uint64(number))
 	if errors.Is(err, safedb.ErrNotFound) {
 		return nil, err

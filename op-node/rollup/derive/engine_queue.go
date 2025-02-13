@@ -122,7 +122,7 @@ type EngineQueue struct {
 	log log.Logger
 	cfg *rollup.Config
 
-	ec LocalEngineControl
+	ec LocalEngineControl // 重要
 
 	attributesHandler AttributesHandler
 
@@ -197,7 +197,7 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 		// The pipeline cannot move forwards if doing EL sync.
 		return EngineELSyncing
 	}
-	if err := eq.attributesHandler.Proceed(ctx); err != io.EOF {
+	if err := eq.attributesHandler.Proceed(ctx); err != io.EOF { // here
 		return err // if nil, or not EOF, then the attribute processing has to be revisited later.
 	}
 	if eq.lastNotifiedSafeHead != eq.ec.SafeL2Head() {
@@ -270,7 +270,7 @@ func (eq *EngineQueue) verifyNewL1Origin(ctx context.Context, newOrigin eth.L1Bl
 
 // Reset walks the L2 chain backwards until it finds an L2 block whose L1 origin is canonical.
 // The unsafe head is set to the head of the L2 chain, unless the existing safe head is not canonical.
-// TODO: look into it.
+// TODO: look into it. 很重要啊
 func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.SystemConfig) error {
 	result, err := sync.FindL2Heads(ctx, eq.cfg, eq.l1Fetcher, eq.engine /*l2*/, eq.log, eq.syncCfg)
 	if err != nil {

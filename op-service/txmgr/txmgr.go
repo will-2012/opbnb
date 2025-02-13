@@ -210,7 +210,7 @@ func (m *SimpleTxManager) Send(ctx context.Context, candidate TxCandidate) (*typ
 	if m.closed.Load() {
 		return nil, ErrClosed
 	}
-	m.metr.RecordPendingTx(m.pending.Add(1))
+	m.metr.RecordPendingTx(m.pending.Add(1)) // metrics
 	defer func() {
 		m.metr.RecordPendingTx(m.pending.Add(-1))
 	}()

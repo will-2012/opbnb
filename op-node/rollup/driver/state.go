@@ -262,7 +262,8 @@ func (s *Driver) eventLoop() {
 		// so, we don't need to receive the payload here
 		_, err := s.sequencer.RunNextSequencerAction(s.driverCtx, s.asyncGossiper, s.sequencerConductor)
 		if errors.Is(err, derive.ErrReset) {
-			s.derivation.Reset()
+			// derivation reset保证可以找到新的分叉前的block，基于那个block继续出块
+			s.derivation.Reset() // 出块时发现reorg
 		} else if err != nil {
 			s.log.Error("Sequencer critical error", "err", err)
 			return err
@@ -441,7 +442,7 @@ func (s *Driver) eventLoop() {
 				stepAttempts = 0
 				s.metrics.SetDerivationIdle(true)
 				continue
-			} else if err != nil && errors.Is(err, derive.ErrReset) {
+			} else if err != nil && errors.Is(err, derive.ErrReset) { // reorg
 				// If the pipeline corrupts, e.g. due to a reorg, simply reset it
 				// reorg
 				s.log.Warn("Derivation pipeline is reset", "err", err)
