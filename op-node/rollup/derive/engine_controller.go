@@ -44,7 +44,7 @@ var (
 )
 
 var _ EngineControl = (*EngineController)(nil)
-var _ LocalEngineControl = (*EngineController)(nil)
+var _ LocalEngineControl = (*EngineController)(nil) // 一个玩意儿。。
 
 type ExecEngine interface {
 	GetPayload(ctx context.Context, payloadInfo eth.PayloadInfo) (*eth.ExecutionPayloadEnvelope, error)
@@ -255,6 +255,7 @@ func (e *EngineController) StartPayload(
 		return errTyp, err
 	}
 
+	// cache it in engine controller
 	e.buildingInfo = eth.PayloadInfo{ID: id, Timestamp: uint64(attrs.Attributes.Timestamp)}
 	e.buildingSafe = updateSafe
 	e.buildingOnto = parent
@@ -310,18 +311,18 @@ func (e *EngineController) ConfirmPayload(
 	e.unsafeHead = ref // sequencer update unsafe head
 
 	e.metrics.RecordL2Ref("l2_unsafe", ref)
-	if e.buildingSafe {
+	if e.buildingSafe { // 挑战pendingsafe。。。
 		e.metrics.RecordL2Ref("l2_pending_safe", ref)
-		e.pendingSafeHead = ref
+		e.pendingSafeHead = ref //
 		if updateSafe {
-			e.safeHead = ref
+			e.safeHead = ref //
 			e.metrics.RecordL2Ref("l2_safe", ref)
 			// Remove backupUnsafeHead because this backup will be never used after consolidation.
 			e.SetBackupUnsafeL2Head(eth.L2BlockRef{}, false)
 		}
 	}
 
-	e.resetBuildingState()
+	e.resetBuildingState() // 清空状态
 	return envelope, BlockInsertOK, nil
 }
 

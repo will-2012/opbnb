@@ -122,7 +122,7 @@ type EngineQueue struct {
 	log log.Logger
 	cfg *rollup.Config
 
-	ec LocalEngineControl // 重要
+	ec LocalEngineControl // 重要，他和engine controller的差异是啥。。。
 
 	attributesHandler AttributesHandler
 
@@ -229,7 +229,7 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 	} else if err != nil {
 		return err
 	} else {
-		eq.attributesHandler.SetAttributes(next)
+		eq.attributesHandler.SetAttributes(next) // here 使用派生时候被用到？？
 		eq.log.Debug("Adding next safe attributes", "safe_head", eq.ec.SafeL2Head(),
 			"pending_safe_head", eq.ec.PendingSafeL2Head(), "next", next)
 		return NotEnoughData

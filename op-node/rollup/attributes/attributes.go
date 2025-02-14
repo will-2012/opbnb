@@ -133,7 +133,7 @@ func (eq *AttributesHandler) consolidateNextSafeAttributes(ctx context.Context, 
 	if err != nil {
 		return derive.NewResetError(fmt.Errorf("failed to decode L2 block ref from payload: %w", err))
 	}
-	eq.ec.SetPendingSafeL2Head(ref)
+	eq.ec.SetPendingSafeL2Head(ref) //
 	if attributes.IsLastInSpan {
 		eq.ec.SetSafeHead(ref) // 更新safe
 	}
@@ -145,11 +145,13 @@ func (eq *AttributesHandler) consolidateNextSafeAttributes(ctx context.Context, 
 func (eq *AttributesHandler) forceNextSafeAttributes(ctx context.Context, attributes *derive.AttributesWithParent) error {
 	// reorg??
 
+	// pending safe和unsafe是一样的
 	attrs := attributes.Attributes
 	errType, err := eq.ec.StartPayload(ctx, eq.ec.PendingSafeL2Head(), attributes, true) // safe
 	if err == nil {
 		_, errType, err = eq.ec.ConfirmPayload(ctx, async.NoOpGossiper{}, &conductor.NoOpConductor{})
 	}
+
 	if err != nil {
 		switch errType {
 		case derive.BlockInsertTemporaryErr:

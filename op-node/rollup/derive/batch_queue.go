@@ -91,7 +91,7 @@ func (bq *BatchQueue) popNextBatch(parent eth.L2BlockRef) *SingularBatch {
 }
 
 // NextBatch return next valid batch upon the given safe head.
-// It also returns the boolean that indicates if the batch is the last block in the batch.
+// It also returns the boolean that indicates if the batch is the last block in the batch. // pending safe相关
 func (bq *BatchQueue) NextBatch(ctx context.Context, parent eth.L2BlockRef) (*SingularBatch, bool, error) {
 	if len(bq.nextSpan) > 0 {
 		// There are cached singular batches derived from the span batch.
