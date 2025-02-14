@@ -73,6 +73,7 @@ func (ch *Channel) AddFrame(frame Frame, l1InclusionBlock eth.L1BlockRef) error 
 
 	// Guaranteed to succeed. Now update internal state
 	if frame.IsLast {
+		// channel是完整的了
 		ch.endFrameNumber = frame.FrameNumber
 		ch.closed = true
 	}

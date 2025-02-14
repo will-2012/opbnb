@@ -40,6 +40,7 @@ func NewL1OriginSelector(log log.Logger, cfg *rollup.Config, l1 L1Blocks) *L1Ori
 // FindL1Origin determines what the next L1 Origin should be.
 // The L1 Origin is either the L2 Head's Origin, or the following L1 block
 // if the next L2 block's time is greater than or equal to the L2 Head's Origin.
+// 名字优点歧义
 func (los *L1OriginSelector) FindL1Origin(ctx context.Context, l2Head eth.L2BlockRef) (eth.L1BlockRef, error) {
 	// Grab a reference to the current L1 origin block. This call is by hash and thus easily cached.
 	currentOrigin, err := los.l1.L1BlockRefByHash(ctx, l2Head.L1Origin.Hash)
@@ -59,6 +60,7 @@ func (los *L1OriginSelector) FindL1Origin(ctx context.Context, l2Head eth.L2Bloc
 	if pastSeqDrift {
 		log.Warn("Next L2 block time is past the sequencer drift + current origin time")
 		// Must fetch next L1 block as long as it may take, cause we are pastSeqDrift
+		// ??
 		refCtx = ctx
 	}
 

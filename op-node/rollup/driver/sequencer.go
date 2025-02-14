@@ -39,7 +39,7 @@ type Sequencer struct {
 	rollupCfg *rollup.Config
 	spec      *rollup.ChainSpec
 
-	engine derive.EngineControl
+	engine derive.EngineControl // 这个比较重要
 
 	attrBuilder      derive.AttributesBuilder
 	l1OriginSelector L1OriginSelectorIface
@@ -52,7 +52,13 @@ type Sequencer struct {
 	nextAction time.Time
 }
 
-func NewSequencer(log log.Logger, rollupCfg *rollup.Config, engine derive.EngineControl, attributesBuilder derive.AttributesBuilder, l1OriginSelector L1OriginSelectorIface, metrics SequencerMetrics) *Sequencer {
+func NewSequencer(
+	log log.Logger,
+	rollupCfg *rollup.Config,
+	engine derive.EngineControl,
+	attributesBuilder derive.AttributesBuilder,
+	l1OriginSelector L1OriginSelectorIface,
+	metrics SequencerMetrics) *Sequencer {
 	return &Sequencer{
 		log:              log,
 		rollupCfg:        rollupCfg,
@@ -65,9 +71,15 @@ func NewSequencer(log log.Logger, rollupCfg *rollup.Config, engine derive.Engine
 	}
 }
 
+/*
+
+1.
+
+*/
+
 // StartBuildingBlock initiates a block building job on top of the given L2 head, safe and finalized blocks, and using the provided l1Origin.
 func (d *Sequencer) StartBuildingBlock(ctx context.Context) error {
-	l2Head := d.engine.UnsafeL2Head()
+	l2Head := d.engine.UnsafeL2Head() // 当前l2的头，找一个l2的头
 
 	// Figure out which L1 origin block we're going to be building on top of.
 	start := time.Now()
@@ -99,6 +111,7 @@ func (d *Sequencer) StartBuildingBlock(ctx context.Context) error {
 	// empty blocks (other than the L1 info deposit and any user deposits). We handle this by
 	// setting NoTxPool to true, which will cause the Sequencer to not include any transactions
 	// from the transaction pool.
+	// 这个检测没啥用；貌似FindL1Origin就会提前返回错误了。
 	attrs.NoTxPool = uint64(attrs.Timestamp) > l1Origin.Time+d.spec.MaxSequencerDrift(l1Origin.Time)
 
 	// For the Ecotone activation block we shouldn't include any sequencer transactions.
@@ -118,9 +131,9 @@ func (d *Sequencer) StartBuildingBlock(ctx context.Context) error {
 		"origin", l1Origin, "origin_time", l1Origin.Time, "noTxPool", attrs.NoTxPool)
 
 	// Start a payload building process.
-	withParent := &derive.AttributesWithParent{Attributes: attrs, Parent: l2Head, IsLastInSpan: false}
+	withParent := &derive.AttributesWithParent{Attributes: attrs, Parent: l2Head, IsLastInSpan: false /*这个参数有啥用？？*/}
 	start = time.Now()
-	errTyp, err := d.engine.StartPayload(ctx, l2Head, withParent, false)
+	errTyp, err := d.engine.StartPayload(ctx, l2Head, withParent, false) // unsafe
 	if err != nil {
 		return fmt.Errorf("failed to start building on top of L2 chain %s, error (%d): %w", l2Head, errTyp, err)
 	}
@@ -128,10 +141,14 @@ func (d *Sequencer) StartBuildingBlock(ctx context.Context) error {
 	return nil
 }
 
-// CompleteBuildingBlock takes the current block that is being built, and asks the engine to complete the building, seal the block, and persist it as canonical.
+// CompleteBuildingBlock takes the current block that is being built,
+// and asks the engine to complete the building, seal the block, and persist it as canonical.
 // Warning: the safe and finalized L2 blocks as viewed during the initiation of the block building are reused for completion of the block building.
 // The Execution engine should not change the safe and finalized blocks between start and completion of block building.
-func (d *Sequencer) CompleteBuildingBlock(ctx context.Context, agossip async.AsyncGossiper, sequencerConductor conductor.SequencerConductor) (*eth.ExecutionPayloadEnvelope, error) {
+func (d *Sequencer) CompleteBuildingBlock(
+	ctx context.Context,
+	agossip async.AsyncGossiper,
+	sequencerConductor conductor.SequencerConductor) (*eth.ExecutionPayloadEnvelope, error) {
 	envelope, errTyp, err := d.engine.ConfirmPayload(ctx, agossip, sequencerConductor)
 	if err != nil {
 		return nil, fmt.Errorf("failed to complete building block: error (%d): %w", errTyp, err)
@@ -148,7 +165,7 @@ func (d *Sequencer) CancelBuildingBlock(ctx context.Context) {
 
 // PlanNextSequencerAction returns a desired delay till the RunNextSequencerAction call.
 func (d *Sequencer) PlanNextSequencerAction() time.Duration {
-	buildingOnto, buildingID, safe := d.engine.BuildingPayload()
+	buildingOnto, buildingID, safe := d.engine.BuildingPayload() // 什么时候是safe、什么时候是unsafe？？
 	// If the engine is busy building safe blocks (and thus changing the head that we would sync on top of),
 	// then give it time to sync up.
 	if safe {
@@ -192,6 +209,27 @@ func (d *Sequencer) PlanNextSequencerAction() time.Duration {
 	}
 }
 
+/*
+func planNextSequencerTimePoint() time.Duration {
+	// seal_time = 1ms
+	// block_time = 1second
+	remaining_time_delta = cur_unsafe_block.timestamp + block_time - now()
+	if cur_unsafe_block is building {
+		if remaining_time_delta < seal_time {
+		return 0 // 马上执行
+	} else {
+		return remaining_time_delta - seal_time // 给执行引擎时间打包tx
+	}
+	} else {
+		if remaining_time_delta > block_time {
+			return remaining_time_delta - block_time // 时间太多了，晚点执行
+		} else {
+			return 0
+		}
+	}
+}
+*/
+
 // BuildingOnto returns the L2 head reference that the latest block is or was being built on top of.
 func (d *Sequencer) BuildingOnto() eth.L2BlockRef {
 	ref, _, _ := d.engine.BuildingPayload()
@@ -212,15 +250,18 @@ func (d *Sequencer) BuildingOnto() eth.L2BlockRef {
 //
 // Upon L1 reorgs that are deep enough to affect the L1 origin selection, a reset-error may occur,
 // to direct the engine to follow the new L1 chain before continuing to sequence blocks.
-// It is up to the EngineControl implementation to handle conflicting build jobs of the derivation
+// It is up to the EngineControl implementation to handle conflicting build jobs of the derivation // 需要留意
 // process (as verifier) and sequencing process.
 // Generally it is expected that the latest call interrupts any ongoing work,
 // and the derivation process does not interrupt in the happy case,
-// since it can consolidate previously sequenced blocks by comparing sequenced inputs with derived inputs.
+// since it can consolidate previously sequenced blocks by comparing sequenced inputs with derived inputs. // 理解
 // If the derivation pipeline does force a conflicting block, then an ongoing sequencer task might still finish,
 // but the derivation can continue to reset until the chain is correct.
 // If the engine is currently building safe blocks, then that building is not interrupted, and sequencing is delayed.
-func (d *Sequencer) RunNextSequencerAction(ctx context.Context, agossip async.AsyncGossiper, sequencerConductor conductor.SequencerConductor) (*eth.ExecutionPayloadEnvelope, error) {
+func (d *Sequencer) RunNextSequencerAction(
+	ctx context.Context,
+	agossip async.AsyncGossiper,
+	sequencerConductor conductor.SequencerConductor) (*eth.ExecutionPayloadEnvelope, error) {
 	// if the engine returns a non-empty payload, OR if the async gossiper already has a payload, we can CompleteBuildingBlock
 	if onto, buildingID, safe := d.engine.BuildingPayload(); buildingID != (eth.PayloadID{}) || agossip.Get() != nil {
 		if safe {
@@ -234,7 +275,7 @@ func (d *Sequencer) RunNextSequencerAction(ctx context.Context, agossip async.As
 			if errors.Is(err, derive.ErrCritical) {
 				return nil, err // bubble up critical errors.
 			} else if errors.Is(err, derive.ErrReset) {
-				d.log.Error("sequencer failed to seal new block, requiring derivation reset", "err", err)
+				d.log.Error("sequencer failed to seal new block, requiring derivation reset", "err", err) // why??
 				d.metrics.RecordSequencerReset()
 				d.nextAction = d.timeNow().Add(time.Second * time.Duration(d.rollupCfg.BlockTime)) // hold off from sequencing for a full block
 				d.CancelBuildingBlock(ctx)

@@ -31,24 +31,26 @@ var (
 type SyncStatus = eth.SyncStatus
 
 // sealingDuration defines the expected time it takes to seal the block
+// seal block具体怎么理解？？
 const sealingDuration = time.Millisecond * 1
 
 type Driver struct {
 	l1State L1StateIface
 
-	// The derivation pipeline is reset whenever we reorg.
+	// The derivation pipeline is reset whenever we reorg. // l1 reorg
 	// The derivation pipeline determines the new l2Safe.
 	derivation DerivationPipeline
 
 	finalizer Finalizer
 
-	clSync CLSync
+	clSync CLSync // 先不看
 
 	// The engine controller is used by the sequencer & derivation components.
 	// We will also use it for EL sync in a future PR.
 	engineController *derive.EngineController
 
 	// Requests to block the event loop for synchronous execution to avoid reading an inconsistent state
+	// 阻塞eventloop读内部状态
 	stateReq chan chan struct{}
 
 	// Upon receiving a channel in this channel, the derivation pipeline is forced to be reset.
@@ -74,7 +76,7 @@ type Driver struct {
 	// Rollup config: rollup chain configuration
 	config *rollup.Config
 
-	sequencerConductor conductor.SequencerConductor
+	sequencerConductor conductor.SequencerConductor // 先不看
 
 	// Driver config: verifier and sequencer settings
 	driverConfig *Config
@@ -121,10 +123,11 @@ type Driver struct {
 // Start starts up the state loop.
 // The loop will have been started iff err is not nil.
 func (s *Driver) Start() error {
-	s.derivation.Reset()
+	s.derivation.Reset() // derivation step时候会拿最新的L1、L2信息
 
 	log.Info("Starting driver", "sequencerEnabled", s.driverConfig.SequencerEnabled, "sequencerStopped", s.driverConfig.SequencerStopped)
 	if s.driverConfig.SequencerEnabled {
+		// 在enable时，持久化sequencer start/stop状态到配置文件
 		// Notify the initial sequencer state
 		// This ensures persistence can write the state correctly and that the state file exists
 		var err error
@@ -203,7 +206,7 @@ func (s *Driver) eventLoop() {
 	defer s.driverCancel()
 
 	// stepReqCh is used to request that the driver attempts to step forward by one L1 block.
-	stepReqCh := make(chan struct{}, 1)
+	stepReqCh := make(chan struct{}, 1) // 一个信号
 
 	// channel, nil by default (not firing), but used to schedule re-attempts with delay
 	var delayedStepReq <-chan time.Time
@@ -217,6 +220,7 @@ func (s *Driver) eventLoop() {
 		select {
 		case stepReqCh <- struct{}{}:
 		// Don't deadlock if the channel is already full
+		// 触发机制有点乱，靠这个兜底？？
 		default:
 		}
 	}
@@ -237,10 +241,10 @@ func (s *Driver) eventLoop() {
 		}
 	}
 
-	// We call reqStep right away to finish syncing to the tip of the chain if we're behind.
+	// We call reqStep right away to finish syncing to the tip of the chain if we're behind. 如果落后了，那么需要同步？？
 	// reqStep will also be triggered when the L1 head moves forward or if there was a reorg on the
 	// L1 chain that we need to handle.
-	reqStep()
+	reqStep() // 初始情况下stepReqCh中有一个信号。
 
 	sequencerTimer := time.NewTimer(0)
 	var sequencerCh <-chan time.Time
@@ -258,7 +262,8 @@ func (s *Driver) eventLoop() {
 		// so, we don't need to receive the payload here
 		_, err := s.sequencer.RunNextSequencerAction(s.driverCtx, s.asyncGossiper, s.sequencerConductor)
 		if errors.Is(err, derive.ErrReset) {
-			s.derivation.Reset()
+			// derivation reset保证可以找到新的分叉前的block，基于那个block继续出块
+			s.derivation.Reset() // 出块时发现reorg
 		} else if err != nil {
 			s.log.Error("Sequencer critical error", "err", err)
 			return err
@@ -272,7 +277,7 @@ func (s *Driver) eventLoop() {
 	syncCheckInterval := time.Duration(s.config.BlockTime) * time.Second * 2
 	altSyncTicker := time.NewTicker(syncCheckInterval)
 	defer altSyncTicker.Stop()
-	lastUnsafeL2 := s.engineController.UnsafeL2Head()
+	lastUnsafeL2 := s.engineController.UnsafeL2Head() // 刚开始这个是空的吧？？
 
 	for {
 		if s.driverCtx.Err() != nil { // don't try to schedule/handle more work when we are closing.
@@ -284,7 +289,8 @@ func (s *Driver) eventLoop() {
 		// And avoid sequencing if the derivation pipeline indicates the engine is not ready.
 		if s.driverConfig.SequencerEnabled && !s.driverConfig.SequencerStopped &&
 			s.l1State.L1Head() != (eth.L1BlockRef{}) && s.derivation.EngineReady() {
-			if s.driverConfig.SequencerMaxSafeLag > 0 && s.engineController.SafeL2Head().Number+s.driverConfig.SequencerMaxSafeLag <= s.engineController.UnsafeL2Head().Number {
+			if s.driverConfig.SequencerMaxSafeLag > 0 &&
+				s.engineController.SafeL2Head().Number+s.driverConfig.SequencerMaxSafeLag <= s.engineController.UnsafeL2Head().Number {
 				// If the safe head has fallen behind by a significant number of blocks, delay creating new blocks
 				// until the safe lag is below SequencerMaxSafeLag.
 				if sequencerCh != nil {
@@ -423,7 +429,7 @@ func (s *Driver) eventLoop() {
 			if s.engineController.IsEngineSyncing() {
 				continue
 			}
-			s.log.Debug("Sync process step", "onto_origin", s.derivation.Origin(), "attempts", stepAttempts)
+			s.log.Debug("Sync process step", "onto_origin", s.derivation.Origin() /*第一次执行时，这个是空的吧？？*/, "attempts", stepAttempts)
 			err := s.syncStep(s.driverCtx)
 			stepAttempts += 1 // count as attempt by default. We reset to 0 if we are making healthy progress.
 			if err == io.EOF {
@@ -436,10 +442,11 @@ func (s *Driver) eventLoop() {
 				stepAttempts = 0
 				s.metrics.SetDerivationIdle(true)
 				continue
-			} else if err != nil && errors.Is(err, derive.ErrReset) {
+			} else if err != nil && errors.Is(err, derive.ErrReset) { // reorg
 				// If the pipeline corrupts, e.g. due to a reorg, simply reset it
+				// reorg
 				s.log.Warn("Derivation pipeline is reset", "err", err)
-				s.derivation.Reset()
+				s.derivation.Reset() // 下次 step时候，重新获取L1的head了，也就是最新的head
 				s.metrics.RecordPipelineReset()
 				continue
 			} else if err != nil && errors.Is(err, derive.ErrTemporary) {
@@ -473,6 +480,7 @@ func (s *Driver) eventLoop() {
 			if !s.driverConfig.SequencerStopped {
 				resp.err <- ErrSequencerAlreadyStarted
 			} else if !bytes.Equal(unsafeHead[:], resp.hash[:]) {
+				// 需要从unsafe head开始
 				resp.err <- fmt.Errorf("block hash does not match: head %s, received %s", unsafeHead.String(), resp.hash.String())
 			} else {
 				if err := s.sequencerNotifs.SequencerStarted(); err != nil {
@@ -507,6 +515,7 @@ func (s *Driver) eventLoop() {
 	}
 }
 
+// 名字很奇怪？？怎么理解语义？？
 func (s *Driver) syncStep(ctx context.Context) error {
 	// If we don't need to call FCU to restore unsafeHead using backupUnsafe, keep going b/c
 	// this was a no-op(except correcting invalid state when backupUnsafe is empty but TryBackupUnsafeReorg called).
@@ -521,7 +530,7 @@ func (s *Driver) syncStep(ctx context.Context) error {
 	}
 	// Trying unsafe payload should be done before safe attributes
 	// It allows the unsafe head to move forward while the long-range consolidation is in progress.
-	if err := s.clSync.Proceed(ctx); err != io.EOF {
+	if err := s.clSync.Proceed(ctx); err != io.EOF /*unsafe为空时候，是eof*/ {
 		// EOF error means we can't process the next unsafe payload. Then we should process next safe attributes.
 		return err
 	}
@@ -542,6 +551,7 @@ func (s *Driver) ResetDerivationPipeline(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-respCh:
+			// 等待reset结束
 			return nil
 		}
 	}
@@ -568,11 +578,13 @@ func (s *Driver) StartSequencer(ctx context.Context, blockHash common.Hash) erro
 		case <-ctx.Done():
 			return ctx.Err()
 		case e := <-h.err:
+			//
 			return e
 		}
 	}
 }
 
+// StopSequencer 貌似是高可用切换时候用的？？
 func (s *Driver) StopSequencer(ctx context.Context) (common.Hash, error) {
 	if !s.driverConfig.SequencerEnabled {
 		return common.Hash{}, errors.New("sequencer is not enabled")
@@ -591,6 +603,7 @@ func (s *Driver) StopSequencer(ctx context.Context) (common.Hash, error) {
 	}
 }
 
+// SequencerActive sequencer是否是enable并且started
 func (s *Driver) SequencerActive(ctx context.Context) (bool, error) {
 	if !s.driverConfig.SequencerEnabled {
 		return false, nil

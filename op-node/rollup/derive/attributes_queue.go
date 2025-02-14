@@ -31,7 +31,7 @@ type AttributesBuilder interface {
 type AttributesWithParent struct {
 	Attributes   *eth.PayloadAttributes
 	Parent       eth.L2BlockRef
-	IsLastInSpan bool
+	IsLastInSpan bool // 干嘛用的？？
 }
 
 type AttributesQueue struct {

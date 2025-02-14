@@ -143,7 +143,7 @@ func confirmPayload(
 			"txs", len(envelope.ExecutionPayload.Transactions))
 	} else {
 		start := time.Now()
-		envelope, err = eng.GetPayload(ctx, payloadInfo)
+		envelope, err = eng.GetPayload(ctx, payloadInfo) // 获取payload by id
 		metrics.RecordSequencerStepTime("getPayload", time.Since(start))
 	}
 	if err != nil {
@@ -162,7 +162,7 @@ func confirmPayload(
 	agossip.Gossip(envelope)
 
 	start := time.Now()
-	status, err := eng.NewPayload(ctx, payload, envelope.ParentBeaconBlockRoot)
+	status, err := eng.NewPayload(ctx, payload, envelope.ParentBeaconBlockRoot) // new payload
 	if err != nil {
 		return nil, BlockInsertTemporaryErr, fmt.Errorf("failed to insert execution payload: %w", err)
 	}
@@ -180,7 +180,7 @@ func confirmPayload(
 		fc.SafeBlockHash = payload.BlockHash
 	}
 	start = time.Now()
-	fcRes, err := eng.ForkchoiceUpdate(ctx, &fc, nil)
+	fcRes, err := eng.ForkchoiceUpdate(ctx, &fc, nil) // fcu
 	if err != nil {
 		var inputErr eth.InputError
 		if errors.As(err, &inputErr) {

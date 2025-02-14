@@ -50,12 +50,16 @@ func NewFetchingAttributesBuilder(rollupCfg *rollup.Config, l1 L1ReceiptsFetcher
 	}
 }
 
-// PreparePayloadAttributes prepares a PayloadAttributes template that is ready to build a L2 block with deposits only, on top of the given l2Parent, with the given epoch as L1 origin.
+// PreparePayloadAttributes prepares a PayloadAttributes template that is ready to build a L2 block with deposits only,
+// on top of the given l2Parent, with the given epoch as L1 origin.
 // The template defaults to NoTxPool=true, and no sequencer transactions: the caller has to modify the template to add transactions,
 // by setting NoTxPool=false as sequencer, or by appending batch transactions as verifier.
 // The severity of the error is returned; a crit=false error means there was a temporary issue, like a failed RPC or time-out.
 // A crit=true error means the input arguments are inconsistent or invalid.
-func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Context, l2Parent eth.L2BlockRef, epoch eth.BlockID) (attrs *eth.PayloadAttributes, err error) {
+func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(
+	ctx context.Context,
+	l2Parent eth.L2BlockRef,
+	epoch eth.BlockID) (attrs *eth.PayloadAttributes, err error) {
 	var l1Info eth.BlockInfo
 	var depositTxs []hexutil.Bytes
 	var seqNumber uint64

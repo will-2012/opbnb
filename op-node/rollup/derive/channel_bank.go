@@ -126,7 +126,7 @@ func (cb *ChannelBank) Read() (data []byte, err error) {
 	first := cb.channelQueue[0]
 	ch := cb.channels[first]
 	timedOut := ch.OpenBlockNumber()+cb.spec.ChannelTimeout() < cb.Origin().Number
-	if timedOut {
+	if timedOut { // 删除老的数据？？
 		cb.log.Info("channel timed out", "channel", first, "frames", len(ch.inputs))
 		cb.metrics.RecordChannelTimedOut()
 		delete(cb.channels, first)
@@ -163,8 +163,10 @@ func (cb *ChannelBank) tryReadChannelAtIndex(i int) (data []byte, err error) {
 	}
 	cb.log.Info("Reading channel", "channel", chanID, "frames", len(ch.inputs))
 
+	// 直接删掉了？？  如果channel没有ready怎么办？？
 	delete(cb.channels, chanID)
 	cb.channelQueue = slices.Delete(cb.channelQueue, i, i+1)
+
 	cb.metrics.RecordHeadChannelOpened()
 	r := ch.Reader()
 	// Suppress error here. io.ReadAll does return nil instead of io.EOF though.

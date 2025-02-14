@@ -28,7 +28,7 @@ type L1ClientConfig struct {
 
 func L1ClientDefaultConfig(config *rollup.Config, trustRPC bool, kind RPCProviderKind) *L1ClientConfig {
 	// Cache 3/2 worth of sequencing window of receipts and txs
-	span := int(config.SeqWindowSize) * 3 / 2
+	span := int(config.SeqWindowSize) * 3 / 2 // 这里需要rollup config
 	fullSpan := span
 	if span > 1000 { // sanity cap. If a large sequencing window is configured, do not make the cache too large
 		span = 1000

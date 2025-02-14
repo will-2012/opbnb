@@ -49,7 +49,7 @@ type OpNode struct {
 
 	l1HeadsSub     ethereum.Subscription // Subscription to get L1 heads (automatically re-subscribes on error)
 	l1SafeSub      ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
-	l1FinalizedSub ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
+	l1FinalizedSub ethereum.Subscription // Subscription to get L1 finalized blocks, a.k.a. justified data (polling)
 
 	l1Source  *sources.L1Client     // L1 Client to fetch data from
 	l2Driver  *driver.Driver        // L2 Engine to Sync
@@ -348,11 +348,13 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 		return err
 	}
 
+	// 都是提升高可用的
 	var sequencerConductor conductor.SequencerConductor = &conductor.NoOpConductor{}
 	if cfg.ConductorEnabled {
 		sequencerConductor = NewConductorClient(cfg, n.log, n.metrics)
 	}
 
+	// TODO: ??
 	// if plasma is not explicitly activated in the node CLI, the config + any error will be ignored.
 	rpCfg, err := cfg.Rollup.GetOPPlasmaConfig()
 	if cfg.Plasma.Enabled && err != nil {
@@ -369,6 +371,7 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 	} else {
 		n.safeDB = safedb.Disabled
 	}
+	//
 	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.l1Blob, n, n, n.log, snapshotLog, n.metrics, cfg.ConfigPersistence, n.safeDB, &cfg.Sync, sequencerConductor, plasmaDA)
 	return nil
 }
@@ -497,7 +500,7 @@ func (n *OpNode) OnNewL1Head(ctx context.Context, sig eth.L1BlockRef) {
 	// Pass on the event to the L2 Engine
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
-	if err := n.l2Driver.OnL1Head(ctx, sig); err != nil {
+	if err := n.l2Driver.OnL1Head(ctx, sig); err != nil { // 什么情况会失败？？
 		n.log.Warn("failed to notify engine driver of L1 head change", "err", err)
 	}
 }
