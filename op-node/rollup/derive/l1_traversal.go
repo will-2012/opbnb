@@ -76,7 +76,9 @@ func (l1t *L1Traversal) AdvanceL1Block(ctx context.Context) error {
 	if err != nil {
 		return NewTemporaryError(fmt.Errorf("failed to fetch receipts of L1 block %s (parent: %s) for L1 sysCfg update: %w", nextL1Origin, origin, err))
 	}
-	if err := UpdateSystemConfigWithL1Receipts(&l1t.sysCfg, receipts, l1t.cfg, nextL1Origin.Time); err != nil {
+
+	// 看看是否有升级的tx
+	if err := UpdateSystemConfigWithL1Receipts(&l1t.sysCfg, receipts, l1t.cfg, nextL1Origin.Time /*TODO：时间戳变了，需要兼容处理*/); err != nil {
 		// the sysCfg changes should always be formatted correctly.
 		return NewCriticalError(fmt.Errorf("failed to update L1 sysCfg with receipts from block %s: %w", nextL1Origin, err))
 	}
@@ -88,7 +90,7 @@ func (l1t *L1Traversal) AdvanceL1Block(ctx context.Context) error {
 
 // Reset sets the internal L1 block to the supplied base.
 func (l1t *L1Traversal) Reset(ctx context.Context, base eth.L1BlockRef, cfg eth.SystemConfig) error {
-	l1t.block = base
+	l1t.block = base // 初始化的，来自rullup配置？？
 	l1t.done = false
 	l1t.sysCfg = cfg
 	l1t.log.Info("completed reset of derivation pipeline", "origin", base)

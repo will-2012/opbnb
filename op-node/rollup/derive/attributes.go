@@ -85,7 +85,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 			return nil, NewCriticalError(fmt.Errorf("failed to derive some deposits: %w", err))
 		}
 		// apply sysCfg changes
-		if err := UpdateSystemConfigWithL1Receipts(&sysConfig, receipts, ba.rollupCfg, info.Time()); err != nil {
+		if err := UpdateSystemConfigWithL1Receipts(&sysConfig, receipts, ba.rollupCfg, info.Time() /*TODO: l1 time兼容*/); err != nil {
 			return nil, NewCriticalError(fmt.Errorf("failed to apply derived L1 sysCfg updates: %w", err))
 		}
 
@@ -107,7 +107,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 
 	// Calculate bsc block base fee
 	var l1BaseFee *big.Int
-	if ba.rollupCfg.IsSnow(l2Parent.Time + ba.rollupCfg.BlockTime) {
+	if ba.rollupCfg.IsSnow(l2Parent.Time + ba.rollupCfg.BlockTime) { // TODO: update time
 		l1BaseFee, err = SnowL1GasPrice(ctx, ba, epoch)
 		if err != nil {
 			return nil, err
@@ -124,7 +124,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	l1Info = bsc.NewBlockInfoBSCWrapper(l1Info, l1BaseFee)
 
 	// Sanity check the L1 origin was correctly selected to maintain the time invariant between L1 and L2
-	nextL2Time := l2Parent.Time + ba.rollupCfg.BlockTime
+	nextL2Time := l2Parent.Time + ba.rollupCfg.BlockTime // TODO: update it
 	if nextL2Time < l1Info.Time() {
 		return nil, NewResetError(fmt.Errorf("cannot build L2 block on top %s for time %d before L1 origin %s at time %d",
 			l2Parent, nextL2Time, eth.ToBlockID(l1Info), l1Info.Time()))
