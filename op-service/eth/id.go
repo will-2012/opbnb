@@ -54,6 +54,7 @@ type L1BlockRef struct {
 	Number     uint64      `json:"number"`
 	ParentHash common.Hash `json:"parentHash"`
 	Time       uint64      `json:"timestamp"`
+	// TODO：这个时间戳也会变，需要兼容L1的
 }
 
 func (id L1BlockRef) String() string {

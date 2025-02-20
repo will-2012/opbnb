@@ -46,7 +46,7 @@ func EcotoneNetworkUpgradeTransactions() ([]hexutil.Bytes, error) {
 
 	deployL1BlockTransaction, err := types.NewTx(&types.DepositTx{
 		SourceHash:          deployL1BlockSource.SourceHash(),
-		From:                L1BlockDeployerAddress,
+		From:                L1BlockDeployerAddress, // L2 421开头？？
 		To:                  nil,
 		Mint:                big.NewInt(0),
 		Value:               big.NewInt(0),

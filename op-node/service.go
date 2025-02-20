@@ -224,7 +224,7 @@ func NewRollupConfigFromCLI(log log.Logger, ctx *cli.Context) (*rollup.Config, e
 	if err != nil {
 		return nil, err
 	}
-	applyOverrides(ctx, rollupConfig)
+	applyOverrides(ctx, rollupConfig) // 能够覆盖写一些分叉点
 	return rollupConfig, nil
 }
 
