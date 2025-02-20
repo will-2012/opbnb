@@ -31,12 +31,14 @@ func HeaderBlockID(h *types.Header) BlockID {
 }
 
 type L2BlockRef struct {
-	Hash           common.Hash `json:"hash"`
-	Number         uint64      `json:"number"`
-	ParentHash     common.Hash `json:"parentHash"`
-	Time           uint64      `json:"timestamp"`
-	L1Origin       BlockID     `json:"l1origin"`
-	SequenceNumber uint64      `json:"sequenceNumber"` // distance to first block of epoch
+	Hash       common.Hash `json:"hash"`
+	Number     uint64      `json:"number"`
+	ParentHash common.Hash `json:"parentHash"`
+	Time       uint64      `json:"timestamp"`
+	// TODO:
+	TimeMs         uint64
+	L1Origin       BlockID `json:"l1origin"`
+	SequenceNumber uint64  `json:"sequenceNumber"` // distance to first block of epoch
 }
 
 func (id L2BlockRef) String() string {
@@ -54,6 +56,7 @@ type L1BlockRef struct {
 	Number     uint64      `json:"number"`
 	ParentHash common.Hash `json:"parentHash"`
 	Time       uint64      `json:"timestamp"`
+	// TODO: 兼容L1的时间戳变化
 }
 
 func (id L1BlockRef) String() string {

@@ -309,6 +309,8 @@ func BlockAsPayloadEnv(bl *types.Block, canyonForkTime *uint64) (*ExecutionPaylo
 type PayloadAttributes struct {
 	// value for the timestamp field of the new payload
 	Timestamp Uint64Quantity `json:"timestamp"`
+	// TODO:
+	TimestampMs Uint64Quantity
 	// value for the random field of the new payload
 	PrevRandao Bytes32 `json:"prevRandao"`
 	// suggested value for the coinbase field of the new payload

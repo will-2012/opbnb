@@ -36,6 +36,7 @@ const (
 type Batch interface {
 	GetBatchType() int
 	GetTimestamp() uint64
+	// TODO: GetTimestampMs() uint64
 	LogContext(log.Logger) log.Logger
 	AsSingularBatch() (*SingularBatch, bool)
 	AsSpanBatch() (*SpanBatch, bool)

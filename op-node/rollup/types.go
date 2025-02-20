@@ -50,6 +50,10 @@ type Genesis struct {
 	L2 eth.BlockID `json:"l2"`
 	// Timestamp of L2 block
 	L2Time uint64 `json:"l2_time"`
+
+	// TODO:
+	L2TimeMs uint64
+
 	// Initial system configuration values.
 	// The L2 genesis block may not include transactions, and thus cannot encode the config values,
 	// unlike later L2 blocks.
@@ -74,6 +78,8 @@ type Config struct {
 	Genesis Genesis `json:"genesis"`
 	// Seconds per L2 block
 	BlockTime uint64 `json:"block_time"`
+	// TODO:
+	BlockTimeMs uint64
 	// Sequencer batches may not be more than MaxSequencerDrift seconds after
 	// the L1 timestamp of the sequencing window end.
 	//

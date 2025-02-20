@@ -17,7 +17,7 @@ type BlockInfo interface {
 	NumberU64() uint64
 	Time() uint64
 	// MixDigest field, reused for randomness after The Merge (Bellatrix hardfork)
-	MixDigest() common.Hash
+	MixDigest() common.Hash // TODO: 这个字段？ https://github.com/buddh0/BEPs/blob/short_block_interval/BEPs/BEP-520.md
 	BaseFee() *big.Int
 	// BlobBaseFee returns the result of computing the blob fee from excessDataGas, or nil if the
 	// block isn't a Dencun (4844 capable) block
@@ -38,6 +38,7 @@ func InfoToL1BlockRef(info BlockInfo) L1BlockRef {
 		Number:     info.NumberU64(),
 		ParentHash: info.ParentHash(),
 		Time:       info.Time(),
+		// TODO: 时间戳兼容处理
 	}
 }
 
