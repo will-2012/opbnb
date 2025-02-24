@@ -61,7 +61,7 @@ type EngineVersionProvider interface {
 	ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.EngineAPIMethod
 	NewPayloadVersion(timestamp uint64) eth.EngineAPIMethod
 	GetPayloadVersion(timestamp uint64) eth.EngineAPIMethod
-	SealPayloadVersion(timestamp uint64) eth.EngineAPIMethod
+	SealPayloadVersion(timestamp uint64) eth.EngineAPIMethod // opbnb自己优化，新增的
 }
 
 func NewEngineAPIClient(rpc client.RPC, l log.Logger, evp EngineVersionProvider) *EngineAPIClient {

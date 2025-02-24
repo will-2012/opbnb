@@ -87,12 +87,14 @@ func (eq *AttributesHandler) Proceed(ctx context.Context) error {
 			eq.ec.PendingSafeL2Head(), eq.ec.PendingSafeL2Head().ParentID(), eq.attributes.Parent))
 	}
 	if eq.ec.PendingSafeL2Head().Number < eq.ec.UnsafeL2Head().Number {
-		if err := eq.consolidateNextSafeAttributes(ctx, eq.attributes); err != nil {
+		// sequencer
+		if err := eq.consolidateNextSafeAttributes(ctx, eq.attributes); err != nil { // normal path??
 			return err
 		}
 		eq.attributes = nil
 		return nil
 	} else if eq.ec.PendingSafeL2Head().Number == eq.ec.UnsafeL2Head().Number {
+		// verifier
 		if err := eq.forceNextSafeAttributes(ctx, eq.attributes); err != nil {
 			return err
 		}
@@ -126,13 +128,14 @@ func (eq *AttributesHandler) consolidateNextSafeAttributes(ctx context.Context, 
 		// geth cannot wind back a chain without reorging to a new, previously non-canonical, block
 		return eq.forceNextSafeAttributes(ctx, attributes)
 	}
+	// 下一个l2 block ref
 	ref, err := derive.PayloadToBlockRef(eq.cfg, envelope.ExecutionPayload)
 	if err != nil {
 		return derive.NewResetError(fmt.Errorf("failed to decode L2 block ref from payload: %w", err))
 	}
-	eq.ec.SetPendingSafeL2Head(ref)
+	eq.ec.SetPendingSafeL2Head(ref) //
 	if attributes.IsLastInSpan {
-		eq.ec.SetSafeHead(ref)
+		eq.ec.SetSafeHead(ref) // 更新safe
 	}
 	// unsafe head stays the same, we did not reorg the chain.
 	return nil
@@ -140,11 +143,15 @@ func (eq *AttributesHandler) consolidateNextSafeAttributes(ctx context.Context, 
 
 // forceNextSafeAttributes inserts the provided attributes, reorging away any conflicting unsafe chain.
 func (eq *AttributesHandler) forceNextSafeAttributes(ctx context.Context, attributes *derive.AttributesWithParent) error {
+	// reorg??
+
+	// pending safe和unsafe是一样的
 	attrs := attributes.Attributes
-	errType, err := eq.ec.StartPayload(ctx, eq.ec.PendingSafeL2Head(), attributes, true)
+	errType, err := eq.ec.StartPayload(ctx, eq.ec.PendingSafeL2Head(), attributes, true) // safe
 	if err == nil {
 		_, errType, err = eq.ec.ConfirmPayload(ctx, async.NoOpGossiper{}, &conductor.NoOpConductor{})
 	}
+
 	if err != nil {
 		switch errType {
 		case derive.BlockInsertTemporaryErr:
@@ -179,7 +186,7 @@ func (eq *AttributesHandler) forceNextSafeAttributes(ctx context.Context, attrib
 			// the deposit only block fails, this will return the critical error above.
 
 			// Try to restore to previous known unsafe chain.
-			eq.ec.SetBackupUnsafeL2Head(eq.ec.BackupUnsafeL2Head(), true)
+			eq.ec.SetBackupUnsafeL2Head(eq.ec.BackupUnsafeL2Head(), true) // 注意，这个backup true情况
 
 			// drop the payload (by returning no error) without inserting it into the engine
 			return nil

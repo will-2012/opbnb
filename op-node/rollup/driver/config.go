@@ -7,7 +7,7 @@ type Config struct {
 	// SequencerConfDepth is the distance to keep from the L1 head as origin when sequencing new L2 blocks.
 	// If this distance is too large, the sequencer may:
 	// - not adopt a L1 origin within the allowed time (rollup.Config.MaxSequencerDrift)
-	// - not adopt a L1 origin that can be included on L1 within the allowed range (rollup.Config.SeqWindowSize)
+	// - not adopt a L1 origin that can be included on L1 within the allowed range (rollup.Config.SeqWindowSize) // 还需要理解下这俩参数的差异。。
 	// and thus fail to produce a block with anything more than deposits.
 	SequencerConfDepth uint64 `json:"sequencer_conf_depth"`
 

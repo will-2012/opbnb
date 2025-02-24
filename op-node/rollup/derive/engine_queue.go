@@ -122,12 +122,12 @@ type EngineQueue struct {
 	log log.Logger
 	cfg *rollup.Config
 
-	ec LocalEngineControl
+	ec LocalEngineControl // 重要，他和engine controller的差异是啥。。。
 
 	attributesHandler AttributesHandler
 
 	engine L2Source
-	prev   NextAttributesProvider
+	prev   NextAttributesProvider // 不断的迭代生成新的attribute
 
 	origin eth.L1BlockRef   // updated on resets, and whenever we read from the previous stage.
 	sysCfg eth.SystemConfig // only used for pipeline resets
@@ -137,7 +137,7 @@ type EngineQueue struct {
 
 	syncCfg *sync.Config
 
-	safeHeadNotifs       SafeHeadListener // notified when safe head is updated
+	safeHeadNotifs       SafeHeadListener // notified when safe head is updated  是数据库？？干嘛用的？？貌似没用被用到
 	lastNotifiedSafeHead eth.L2BlockRef
 
 	finalizer FinalizerHooks
@@ -180,6 +180,7 @@ func (eq *EngineQueue) isEngineSyncing() bool {
 	return eq.ec.IsEngineSyncing()
 }
 
+// Step TODO: look into it.
 func (eq *EngineQueue) Step(ctx context.Context) error {
 	// If we don't need to call FCU to restore unsafeHead using backupUnsafe, keep going b/c
 	// this was a no-op(except correcting invalid state when backupUnsafe is empty but TryBackupUnsafeReorg called).
@@ -196,7 +197,7 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 		// The pipeline cannot move forwards if doing EL sync.
 		return EngineELSyncing
 	}
-	if err := eq.attributesHandler.Proceed(ctx); err != io.EOF {
+	if err := eq.attributesHandler.Proceed(ctx); err != io.EOF { // here
 		return err // if nil, or not EOF, then the attribute processing has to be revisited later.
 	}
 	if eq.lastNotifiedSafeHead != eq.ec.SafeL2Head() {
@@ -228,7 +229,7 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 	} else if err != nil {
 		return err
 	} else {
-		eq.attributesHandler.SetAttributes(next)
+		eq.attributesHandler.SetAttributes(next) // here 使用派生时候被用到？？
 		eq.log.Debug("Adding next safe attributes", "safe_head", eq.ec.SafeL2Head(),
 			"pending_safe_head", eq.ec.PendingSafeL2Head(), "next", next)
 		return NotEnoughData
@@ -269,14 +270,16 @@ func (eq *EngineQueue) verifyNewL1Origin(ctx context.Context, newOrigin eth.L1Bl
 
 // Reset walks the L2 chain backwards until it finds an L2 block whose L1 origin is canonical.
 // The unsafe head is set to the head of the L2 chain, unless the existing safe head is not canonical.
+// TODO: look into it. 很重要啊
 func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.SystemConfig) error {
-	result, err := sync.FindL2Heads(ctx, eq.cfg, eq.l1Fetcher, eq.engine, eq.log, eq.syncCfg)
+	result, err := sync.FindL2Heads(ctx, eq.cfg, eq.l1Fetcher, eq.engine /*l2*/, eq.log, eq.syncCfg)
 	if err != nil {
 		return NewTemporaryError(fmt.Errorf("failed to find the L2 Heads to start from: %w", err))
 	}
 	finalized, safe, unsafe := result.Finalized, result.Safe, result.Unsafe
 
 	if finalized.Number > safe.Number {
+		// 奇了怪了，各种兜底逻辑。。
 		finalized = safe
 	}
 
@@ -313,7 +316,7 @@ func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.System
 	if err != nil {
 		return NewTemporaryError(fmt.Errorf("failed to fetch L1 config of L2 block %s: %w", pipelineL2.ID(), err))
 	}
-	err2 := eq.l1Fetcher.GoOrUpdatePreFetchReceipts(context.Background(), pipelineOrigin.Number)
+	err2 := eq.l1Fetcher.GoOrUpdatePreFetchReceipts(context.Background(), pipelineOrigin.Number) // 什么意思
 	if err2 != nil {
 		return NewTemporaryError(fmt.Errorf("failed to run pre fetch L1 receipts for L1 start block %s: %w", pipelineOrigin.ID(), err2))
 	}
@@ -348,5 +351,5 @@ func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.System
 			return err
 		}
 	}
-	return io.EOF
+	return io.EOF // succeed is eof
 }

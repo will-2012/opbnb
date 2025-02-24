@@ -157,6 +157,7 @@ func NewDriver(
 	sequencerConfDepth := NewConfDepth(driverCfg.SequencerConfDepth, l1State.L1Head, l1)
 	findL1Origin := NewL1OriginSelector(log, cfg, sequencerConfDepth)
 	verifConfDepth := NewConfDepth(driverCfg.VerifierConfDepth, l1State.L1Head, l1)
+	// engine很重要，状态管理
 	engine := derive.NewEngineController(l2, log, metrics, cfg, syncCfg, driverCfg.SequencerCombinedEngine)
 	clSync := clsync.NewCLSync(log, cfg, metrics, engine)
 
@@ -167,11 +168,11 @@ func NewDriver(
 		finalizer = finality.NewFinalizer(log, cfg, l1, engine)
 	}
 
-	attributesHandler := attributes.NewAttributesHandler(log, cfg, engine, l2)
+	attributesHandler := attributes.NewAttributesHandler(log, cfg, engine, l2) // 1
 	derivationPipeline := derive.NewDerivationPipeline(log, cfg, verifConfDepth, l1Blobs, plasma, l2, engine,
-		metrics, syncCfg, safeHeadListener, finalizer, attributesHandler)
+		metrics, syncCfg, safeHeadListener, finalizer, attributesHandler) // 2
 	attrBuilder := derive.NewFetchingAttributesBuilder(cfg, l1, l2)
-	meteredEngine := NewMeteredEngine(cfg, engine, metrics, log) // Only use the metered engine in the sequencer b/c it records sequencing metrics.
+	meteredEngine := NewMeteredEngine(cfg, engine, metrics, log) // Only use the metered engine in the sequencer b/c it records sequencing metrics. // 3
 	sequencer := NewSequencer(log, cfg, meteredEngine, attrBuilder, findL1Origin, metrics)
 	driverCtx, driverCancel := context.WithCancel(context.Background())
 	asyncGossiper := async.NewAsyncGossiper(driverCtx, network, log, metrics)
@@ -180,7 +181,7 @@ func NewDriver(
 		derivation:         derivationPipeline,
 		clSync:             clSync,
 		finalizer:          finalizer,
-		engineController:   engine,
+		engineController:   engine, // 4
 		stateReq:           make(chan chan struct{}),
 		forceReset:         make(chan chan struct{}, 10),
 		startSequencer:     make(chan hashAndErrorChannel, 10),
