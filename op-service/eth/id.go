@@ -36,9 +36,11 @@ type L2BlockRef struct {
 	ParentHash common.Hash `json:"parentHash"`
 	Time       uint64      `json:"timestamp"`
 	// TODO:
-	TimeMs         uint64
+	TimeMs         uint64  // -- Time、SequenceNumber算这个是不是也行；多想想
 	L1Origin       BlockID `json:"l1origin"`
 	SequenceNumber uint64  `json:"sequenceNumber"` // distance to first block of epoch
+
+	// 基于 Time second timestamp+ SequenceNumber 可以推导出ms timestamp？？ 需要被秒正常的l2 block interval
 }
 
 func (id L2BlockRef) String() string {

@@ -137,7 +137,7 @@ type SequencerStateListener interface {
 // NewDriver composes an events handler that tracks L1 state, triggers L2 derivation, and optionally sequences new L2 blocks.
 func NewDriver(
 	driverCfg *Config,
-	cfg *rollup.Config,
+	cfg *rollup.Config, //
 	l2 L2Chain,
 	l1 L1Chain,
 	l1Blobs derive.L1BlobsFetcher,

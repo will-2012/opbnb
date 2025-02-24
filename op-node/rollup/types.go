@@ -133,6 +133,9 @@ type Config struct {
 	// Active if SnowTime != nil && L2 block timestamp >= *SnowTime, inactive otherwise.
 	SnowTime *uint64 `json:"snow_time,omitempty"`
 
+	// TODO:
+	MillisecondTime *uint64 `json:"millisecond_time,omitempty"`
+
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
 
@@ -429,6 +432,30 @@ func (c *Config) IsFjord(timestamp uint64) bool {
 	return c.FjordTime != nil && timestamp >= *c.FjordTime
 }
 
+const shortenBlockInterval = 500 * time.Millisecond
+
+// TODO: 是个是L2的分叉时间戳，但是变化的也是L2的时间戳-- 是否矛盾、有问题？？
+func (c *Config) IsMillisecond(timestamp uint64) bool {
+	// TODO:
+	//shortenBlockInterval.Milliseconds()
+	return c.MillisecondTime != nil && timestamp >= *c.MillisecondTime
+}
+
+func nextL2BlockTime(rollupCfg Config, currentL2BlockTimeStamp uint64) uint64 { // TODO： 返回time.time是否可以---和兼容l1 origin timestamp保持一致?? 外层是否需要感知是ms，还是s？
+	if rollupCfg.IsMillisecond(currentL2BlockTimeStamp) {
+		ts := time.UnixMilli(int64(currentL2BlockTimeStamp))
+		return uint64(ts.Add(shortenBlockInterval).UnixMilli()) // Millisecond timestamp
+	}
+	return currentL2BlockTimeStamp + rollupCfg.BlockTime // Second timestamp
+}
+
+func L2BlockInterval(rollupCfg Config, currentL2BlockTimeStamp uint64) time.Duration {
+	if rollupCfg.IsMillisecond(currentL2BlockTimeStamp) {
+		return shortenBlockInterval // Millisecond
+	}
+	return time.Duration(int64(rollupCfg.BlockTime) * int64(time.Second)) // Second
+}
+
 // IsFjordActivationBlock returns whether the specified block is the first block subject to the
 // Fjord upgrade.
 func (c *Config) IsFjordActivationBlock(l2BlockTime uint64) bool {
@@ -473,6 +500,8 @@ func (c *Config) IsInteropActivationBlock(l2BlockTime uint64) bool {
 		l2BlockTime >= c.BlockTime &&
 		!c.IsInterop(l2BlockTime-c.BlockTime)
 }
+
+// TODO: IsMillisecondBlockTime(l2BlockTime uint64)??
 
 // ForkchoiceUpdatedVersion returns the EngineAPIMethod suitable for the chain hard fork version.
 func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.EngineAPIMethod {
