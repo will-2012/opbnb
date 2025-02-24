@@ -50,6 +50,9 @@ type Genesis struct {
 	L2 eth.BlockID `json:"l2"`
 	// Timestamp of L2 block
 	L2Time uint64 `json:"l2_time"`
+
+	// TODO:
+	L2TimeMS uint64
 	// Initial system configuration values.
 	// The L2 genesis block may not include transactions, and thus cannot encode the config values,
 	// unlike later L2 blocks.
