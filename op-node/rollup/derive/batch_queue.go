@@ -96,7 +96,7 @@ func (bq *BatchQueue) NextBatch(ctx context.Context, parent eth.L2BlockRef) (*Si
 	if len(bq.nextSpan) > 0 {
 		// There are cached singular batches derived from the span batch.
 		// Check if the next cached batch matches the given parent block.
-		if bq.nextSpan[0].Timestamp == parent.Time+bq.config.BlockTime { // TODO:
+		if bq.nextSpan[0].Timestamp == parent.Time+bq.config.BlockTime { // TODO: L2 timestamp兼容适配
 			// Pop first one and return.
 			nextBatch := bq.popNextBatch(parent)
 			// len(bq.nextSpan) == 0 means it's the last batch of the span.

@@ -141,7 +141,7 @@ func (eq *AttributesHandler) consolidateNextSafeAttributes(ctx context.Context, 
 // forceNextSafeAttributes inserts the provided attributes, reorging away any conflicting unsafe chain.
 func (eq *AttributesHandler) forceNextSafeAttributes(ctx context.Context, attributes *derive.AttributesWithParent) error {
 	attrs := attributes.Attributes
-	errType, err := eq.ec.StartPayload(ctx, eq.ec.PendingSafeL2Head(), attributes, true)
+	errType, err := eq.ec.StartPayload(ctx, eq.ec.PendingSafeL2Head(), attributes, true) // TODO: check it
 	if err == nil {
 		_, errType, err = eq.ec.ConfirmPayload(ctx, async.NoOpGossiper{}, &conductor.NoOpConductor{})
 	}

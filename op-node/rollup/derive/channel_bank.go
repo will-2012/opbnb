@@ -67,7 +67,7 @@ func (cb *ChannelBank) prune() {
 		totalSize += ch.size
 	}
 	// prune until it is reasonable again. The high-priority channel failed to be read, so we start pruning there.
-	for totalSize > cb.spec.MaxChannelBankSize(cb.Origin().Time) {
+	for totalSize > cb.spec.MaxChannelBankSize(cb.Origin().Time) { // TODO: timestamp兼容性处理
 		id := cb.channelQueue[0]
 		ch := cb.channels[id]
 		cb.channelQueue = cb.channelQueue[1:]

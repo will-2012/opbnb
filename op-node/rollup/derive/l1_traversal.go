@@ -28,7 +28,7 @@ type L1Traversal struct {
 	done     bool
 	l1Blocks L1BlockRefByNumberFetcher
 	log      log.Logger
-	sysCfg   eth.SystemConfig
+	sysCfg   eth.SystemConfig // 和block是绑定在一起的
 	cfg      *rollup.Config
 }
 

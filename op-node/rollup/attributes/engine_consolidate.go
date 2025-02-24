@@ -22,7 +22,7 @@ func AttributesMatchBlock(rollupCfg *rollup.Config, attrs *eth.PayloadAttributes
 	if parentHash != block.ParentHash {
 		return fmt.Errorf("parent hash field does not match. expected: %v. got: %v", parentHash, block.ParentHash)
 	}
-	if attrs.Timestamp != block.Timestamp {
+	if attrs.Timestamp != block.Timestamp { // TODO: update
 		return fmt.Errorf("timestamp field does not match. expected: %v. got: %v", uint64(attrs.Timestamp), block.Timestamp)
 	}
 	if attrs.PrevRandao != block.PrevRandao {

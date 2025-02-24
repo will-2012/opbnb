@@ -420,7 +420,7 @@ func (c *Config) IsDelta(timestamp uint64) bool {
 }
 
 // IsEcotone returns true if the Ecotone hardfork is active at or past the given timestamp.
-func (c *Config) IsEcotone(timestamp uint64) bool {
+func (c *Config) IsEcotone(timestamp uint64) bool { // TODO: 是l1的时间，如果时间戳发生变化，如何兼容？？
 	return c.EcotoneTime != nil && timestamp >= *c.EcotoneTime
 }
 
