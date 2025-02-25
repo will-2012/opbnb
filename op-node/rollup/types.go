@@ -129,6 +129,9 @@ type Config struct {
 	// OPBNB hard fork L2 block number
 	// Fermat switch block (nil = no fork, 0 = already on Fermat)
 	Fermat *big.Int `json:"fermat,omitempty"`
+
+	// TODO：也可以是块高？？
+
 	// SnowTime  sets the activation time of the next network upgrade.
 	// Active if SnowTime != nil && L2 block timestamp >= *SnowTime, inactive otherwise.
 	SnowTime *uint64 `json:"snow_time,omitempty"`
@@ -201,10 +204,12 @@ func (cfg *Config) ValidateL2Config(ctx context.Context, client L2Client, skipL2
 }
 
 func (cfg *Config) TimestampForBlock(blockNumber uint64) uint64 {
+	// TODO: 什么时候被使用？？需要做兼容处理...
 	return cfg.Genesis.L2Time + ((blockNumber - cfg.Genesis.L2.Number) * cfg.BlockTime)
 }
 
 func (cfg *Config) TargetBlockNumber(timestamp uint64) (num uint64, err error) {
+	// TODO: 什么时候被使用？？需要做兼容处理...
 	// subtract genesis time from timestamp to get the time elapsed since genesis, and then divide that
 	// difference by the block time to get the expected L2 block number at the current time. If the
 	// unsafe head does not have this block number, then there is a gap in the queue.
@@ -521,6 +526,7 @@ func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.Engin
 		// but upstream Geth v1.13.11 does not accept V2 before Shanghai.
 		return eth.FCUV1
 	}
+	// TODO:
 }
 
 // NewPayloadVersion returns the EngineAPIMethod suitable for the chain hard fork version.

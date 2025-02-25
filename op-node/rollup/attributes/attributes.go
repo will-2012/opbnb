@@ -130,7 +130,7 @@ func (eq *AttributesHandler) consolidateNextSafeAttributes(ctx context.Context, 
 	if err != nil {
 		return derive.NewResetError(fmt.Errorf("failed to decode L2 block ref from payload: %w", err))
 	}
-	eq.ec.SetPendingSafeL2Head(ref)
+	eq.ec.SetPendingSafeL2Head(ref) // pending safe先往前走，是is last后，更新safe.
 	if attributes.IsLastInSpan {
 		eq.ec.SetSafeHead(ref)
 	}
