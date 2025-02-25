@@ -136,7 +136,7 @@ type Config struct {
 	// Active if SnowTime != nil && L2 block timestamp >= *SnowTime, inactive otherwise.
 	SnowTime *uint64 `json:"snow_time,omitempty"`
 
-	// TODO:
+	// TODO: 本身是second的，在这个时间点之后，timestamp调整为ms
 	MillisecondTime *uint64 `json:"millisecond_time,omitempty"`
 
 	// Note: below addresses are part of the block-derivation process,

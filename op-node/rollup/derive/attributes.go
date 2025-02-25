@@ -113,6 +113,9 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 			return nil, err
 		}
 	} else if ba.rollupCfg.IsFermat(big.NewInt(int64(l2Parent.Number + 1))) {
+		// https://github.com/bnb-chain/opbnb/releases/tag/v0.2.2
+		// https://github.com/bnb-chain/opbnb/releases/tag/v0.2.0
+		// 调整L1费率
 		l1BaseFee = bsc.BaseFeeByNetworks(ba.rollupCfg.L2ChainID)
 	} else {
 		_, transactions, err := ba.l1.InfoAndTxsByHash(ctx, epoch.Hash)

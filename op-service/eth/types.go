@@ -181,7 +181,7 @@ type ExecutionPayload struct {
 	BlockNumber   Uint64Quantity  `json:"blockNumber"`
 	GasLimit      Uint64Quantity  `json:"gasLimit"`
 	GasUsed       Uint64Quantity  `json:"gasUsed"`
-	Timestamp     Uint64Quantity  `json:"timestamp"`
+	Timestamp     Uint64Quantity  `json:"timestamp"` // TODO: L2 system contract生效check
 	ExtraData     BytesMax32      `json:"extraData"`
 	BaseFeePerGas Uint256Quantity `json:"baseFeePerGas"`
 	BlockHash     common.Hash     `json:"blockHash"`

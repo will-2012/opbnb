@@ -34,7 +34,7 @@ type L2BlockRef struct {
 	Hash       common.Hash `json:"hash"`
 	Number     uint64      `json:"number"`
 	ParentHash common.Hash `json:"parentHash"`
-	Time       uint64      `json:"timestamp"`
+	Time       uint64      `json:"timestamp"` // 先直接复用试试看；可能是s or ms
 	// TODO:
 	TimeMs         uint64  // -- Time、SequenceNumber算这个是不是也行；多想想
 	L1Origin       BlockID `json:"l1origin"`
