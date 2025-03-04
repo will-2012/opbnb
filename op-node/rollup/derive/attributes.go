@@ -161,7 +161,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 
 	var withdrawals *types.Withdrawals
 	if ba.rollupCfg.IsCanyon(nextL2Time) { // TODO:
-		withdrawals = &types.Withdrawals{}
+		withdrawals = &types.Withdrawals{} // 空的没有用到，就是兼容？？？
 	}
 
 	var parentBeaconRoot *common.Hash
@@ -173,9 +173,9 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	}
 
 	return &eth.PayloadAttributes{
-		Timestamp:             hexutil.Uint64(nextL2Time), // TODO:update it
-		PrevRandao:            eth.Bytes32(l1Info.MixDigest()),
-		SuggestedFeeRecipient: predeploys.SequencerFeeVaultAddr,
+		Timestamp:             hexutil.Uint64(nextL2Time),       // TODO:update it
+		PrevRandao:            eth.Bytes32(l1Info.MixDigest()),  //
+		SuggestedFeeRecipient: predeploys.SequencerFeeVaultAddr, // 收手续费
 		Transactions:          txs,
 		NoTxPool:              true,
 		GasLimit:              (*eth.Uint64Quantity)(&sysConfig.GasLimit),

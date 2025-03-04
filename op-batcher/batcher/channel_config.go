@@ -56,7 +56,7 @@ type ChannelConfig struct {
 func (cc *ChannelConfig) InitCompressorConfig(approxComprRatio float64, comprKind string, compressionAlgo derive.CompressionAlgo) {
 	cc.CompressorConfig = compressor.Config{
 		// Compressor output size needs to account for frame encoding overhead
-		TargetOutputSize: MaxDataSize(cc.TargetNumFrames, cc.MaxFrameSize),
+		TargetOutputSize: MaxDataSize(cc.TargetNumFrames, cc.MaxFrameSize), // channel大小？？
 		ApproxComprRatio: approxComprRatio,
 		Kind:             comprKind,
 		CompressionAlgo:  compressionAlgo,
