@@ -270,7 +270,7 @@ func L1InfoDeposit(rollupCfg *rollup.Config, sysCfg eth.SystemConfig, seqNumber 
 		BatcherAddr:    sysCfg.BatcherAddr,
 	}
 	var data []byte
-	if isEcotoneButNotFirstBlock(rollupCfg, l2BlockTime) {
+	if isEcotoneButNotFirstBlock(rollupCfg, l2BlockTime) { // TODO: polish it
 		l1BlockInfo.BlobBaseFee = block.BlobBaseFee()
 		if l1BlockInfo.BlobBaseFee == nil {
 			// The L2 spec states to use the MIN_BLOB_GASPRICE from EIP-4844 if not yet active on L1.
@@ -314,7 +314,7 @@ func L1InfoDeposit(rollupCfg *rollup.Config, sysCfg eth.SystemConfig, seqNumber 
 		Data:                data,
 	}
 	// With the regolith fork we disable the IsSystemTx functionality, and allocate real gas
-	if rollupCfg.IsRegolith(l2BlockTime) {
+	if rollupCfg.IsRegolith(l2BlockTime) { // TODO: polish it
 		out.IsSystemTransaction = false
 		out.Gas = RegolithSystemTxGas
 	}

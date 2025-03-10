@@ -269,7 +269,7 @@ func (s *Driver) eventLoop() {
 
 	// Create a ticker to check if there is a gap in the engine queue. Whenever
 	// there is, we send requests to sync source to retrieve the missing payloads.
-	syncCheckInterval := time.Duration(s.config.BlockTime) * time.Second * 2
+	syncCheckInterval := time.Duration(s.config.BlockTime) * time.Second * 2 // TODO: polish timestamp
 	altSyncTicker := time.NewTicker(syncCheckInterval)
 	defer altSyncTicker.Stop()
 	lastUnsafeL2 := s.engineController.UnsafeL2Head()
@@ -414,7 +414,7 @@ func (s *Driver) eventLoop() {
 			ctx, cancel := context.WithTimeout(s.driverCtx, time.Second*5)
 			s.finalizer.Finalize(ctx, newL1Finalized)
 			cancel()
-			reqStep() // we may be able to mark more L2 data as finalized now
+			reqStep() // we may be able to mark more L2 data as finalized now // ??
 		case <-delayedStepReq:
 			delayedStepReq = nil
 			step()

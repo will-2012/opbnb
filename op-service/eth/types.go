@@ -181,7 +181,7 @@ type ExecutionPayload struct {
 	BlockNumber   Uint64Quantity  `json:"blockNumber"`
 	GasLimit      Uint64Quantity  `json:"gasLimit"`
 	GasUsed       Uint64Quantity  `json:"gasUsed"`
-	Timestamp     Uint64Quantity  `json:"timestamp"`
+	Timestamp     Uint64Quantity  `json:"timestamp"` // TODO: L2 system contract生效check
 	ExtraData     BytesMax32      `json:"extraData"`
 	BaseFeePerGas Uint256Quantity `json:"baseFeePerGas"`
 	BlockHash     common.Hash     `json:"blockHash"`
@@ -309,6 +309,8 @@ func BlockAsPayloadEnv(bl *types.Block, canyonForkTime *uint64) (*ExecutionPaylo
 type PayloadAttributes struct {
 	// value for the timestamp field of the new payload
 	Timestamp Uint64Quantity `json:"timestamp"`
+	// TODO:
+	TimestampMs Uint64Quantity
 	// value for the random field of the new payload
 	PrevRandao Bytes32 `json:"prevRandao"`
 	// suggested value for the coinbase field of the new payload

@@ -50,6 +50,10 @@ type Genesis struct {
 	L2 eth.BlockID `json:"l2"`
 	// Timestamp of L2 block
 	L2Time uint64 `json:"l2_time"`
+
+	// TODO:
+	L2TimeMs uint64
+
 	// Initial system configuration values.
 	// The L2 genesis block may not include transactions, and thus cannot encode the config values,
 	// unlike later L2 blocks.
@@ -74,6 +78,8 @@ type Config struct {
 	Genesis Genesis `json:"genesis"`
 	// Seconds per L2 block
 	BlockTime uint64 `json:"block_time"`
+	// TODO:
+	BlockTimeMs uint64
 	// Sequencer batches may not be more than MaxSequencerDrift seconds after
 	// the L1 timestamp of the sequencing window end.
 	//
@@ -123,9 +129,15 @@ type Config struct {
 	// OPBNB hard fork L2 block number
 	// Fermat switch block (nil = no fork, 0 = already on Fermat)
 	Fermat *big.Int `json:"fermat,omitempty"`
+
+	// TODO：也可以是块高？？
+
 	// SnowTime  sets the activation time of the next network upgrade.
 	// Active if SnowTime != nil && L2 block timestamp >= *SnowTime, inactive otherwise.
 	SnowTime *uint64 `json:"snow_time,omitempty"`
+
+	// TODO: 本身是second的，在这个时间点之后，timestamp调整为ms
+	MillisecondTime *uint64 `json:"millisecond_time,omitempty"`
 
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
@@ -192,10 +204,12 @@ func (cfg *Config) ValidateL2Config(ctx context.Context, client L2Client, skipL2
 }
 
 func (cfg *Config) TimestampForBlock(blockNumber uint64) uint64 {
+	// TODO: 什么时候被使用？？需要做兼容处理...
 	return cfg.Genesis.L2Time + ((blockNumber - cfg.Genesis.L2.Number) * cfg.BlockTime)
 }
 
 func (cfg *Config) TargetBlockNumber(timestamp uint64) (num uint64, err error) {
+	// TODO: 什么时候被使用？？需要做兼容处理...
 	// subtract genesis time from timestamp to get the time elapsed since genesis, and then divide that
 	// difference by the block time to get the expected L2 block number at the current time. If the
 	// unsafe head does not have this block number, then there is a gap in the queue.
@@ -414,13 +428,37 @@ func (c *Config) IsDelta(timestamp uint64) bool {
 }
 
 // IsEcotone returns true if the Ecotone hardfork is active at or past the given timestamp.
-func (c *Config) IsEcotone(timestamp uint64) bool {
+func (c *Config) IsEcotone(timestamp uint64) bool { // TODO: 是l1的时间，如果时间戳发生变化，如何兼容？？
 	return c.EcotoneTime != nil && timestamp >= *c.EcotoneTime
 }
 
 // IsFjord returns true if the Fjord hardfork is active at or past the given timestamp.
 func (c *Config) IsFjord(timestamp uint64) bool {
 	return c.FjordTime != nil && timestamp >= *c.FjordTime
+}
+
+const shortenBlockInterval = 500 * time.Millisecond
+
+// TODO: 是个是L2的分叉时间戳，但是变化的也是L2的时间戳-- 是否矛盾、有问题？？
+func (c *Config) IsMillisecond(timestamp uint64) bool {
+	// TODO:
+	//shortenBlockInterval.Milliseconds()
+	return c.MillisecondTime != nil && timestamp >= *c.MillisecondTime
+}
+
+func nextL2BlockTime(rollupCfg Config, currentL2BlockTimeStamp uint64) uint64 { // TODO： 返回time.time是否可以---和兼容l1 origin timestamp保持一致?? 外层是否需要感知是ms，还是s？
+	if rollupCfg.IsMillisecond(currentL2BlockTimeStamp) {
+		ts := time.UnixMilli(int64(currentL2BlockTimeStamp))
+		return uint64(ts.Add(shortenBlockInterval).UnixMilli()) // Millisecond timestamp
+	}
+	return currentL2BlockTimeStamp + rollupCfg.BlockTime // Second timestamp
+}
+
+func L2BlockInterval(rollupCfg Config, currentL2BlockTimeStamp uint64) time.Duration {
+	if rollupCfg.IsMillisecond(currentL2BlockTimeStamp) {
+		return shortenBlockInterval // Millisecond
+	}
+	return time.Duration(int64(rollupCfg.BlockTime) * int64(time.Second)) // Second
 }
 
 // IsFjordActivationBlock returns whether the specified block is the first block subject to the
@@ -468,6 +506,8 @@ func (c *Config) IsInteropActivationBlock(l2BlockTime uint64) bool {
 		!c.IsInterop(l2BlockTime-c.BlockTime)
 }
 
+// TODO: IsMillisecondBlockTime(l2BlockTime uint64)??
+
 // ForkchoiceUpdatedVersion returns the EngineAPIMethod suitable for the chain hard fork version.
 func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.EngineAPIMethod {
 	if attr == nil {
@@ -486,6 +526,7 @@ func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.Engin
 		// but upstream Geth v1.13.11 does not accept V2 before Shanghai.
 		return eth.FCUV1
 	}
+	// TODO:
 }
 
 // NewPayloadVersion returns the EngineAPIMethod suitable for the chain hard fork version.

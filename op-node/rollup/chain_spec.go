@@ -43,6 +43,7 @@ const (
 	Fjord    ForkName = "fjord"
 	Interop  ForkName = "interop"
 	None     ForkName = "none"
+	// TODO: check
 )
 
 var nextFork = map[ForkName]ForkName{

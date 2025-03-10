@@ -70,11 +70,11 @@ func PayloadToSystemConfig(rollupCfg *rollup.Config, payload *eth.ExecutionPaylo
 		if tx.Type() != types.DepositTxType {
 			return eth.SystemConfig{}, fmt.Errorf("first payload tx has unexpected tx type: %d", tx.Type())
 		}
-		info, err := L1BlockInfoFromBytes(rollupCfg, uint64(payload.Timestamp), tx.Data())
+		info, err := L1BlockInfoFromBytes(rollupCfg, uint64(payload.Timestamp), tx.Data()) // TODO: update it
 		if err != nil {
 			return eth.SystemConfig{}, fmt.Errorf("failed to parse L1 info deposit tx from L2 block: %w", err)
 		}
-		if isEcotoneButNotFirstBlock(rollupCfg, uint64(payload.Timestamp)) {
+		if isEcotoneButNotFirstBlock(rollupCfg, uint64(payload.Timestamp)) { // TODO: 兼容之前的分叉处理 update it
 			// Translate Ecotone values back into encoded scalar if needed.
 			// We do not know if it was derived from a v0 or v1 scalar,
 			// but v1 is fine, a 0 blob base fee has the same effect.
