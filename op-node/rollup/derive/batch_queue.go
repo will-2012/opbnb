@@ -43,7 +43,7 @@ type BatchQueue struct {
 	log    log.Logger
 	config *rollup.Config
 	prev   NextBatchProvider
-	origin eth.L1BlockRef
+	origin eth.L1BlockRef // l2 safe block's l1 origin block.
 
 	// l1Blocks contains consecutive eth.L1BlockRef sorted by time.
 	// Every L1 origin of unsafe L2 blocks must be eventually included in l1Blocks.
@@ -225,7 +225,7 @@ func (bq *BatchQueue) AddBatch(ctx context.Context, batch Batch, parent eth.L2Bl
 		panic(fmt.Errorf("cannot add batch with timestamp %d, no origin was prepared", batch.GetTimestamp()))
 	}
 	data := BatchWithL1InclusionBlock{
-		L1InclusionBlock: bq.origin,
+		L1InclusionBlock: bq.origin, // here
 		Batch:            batch,
 	}
 	validity := CheckBatch(ctx, bq.config, bq.log, bq.l1Blocks, parent, &data, bq.l2)
