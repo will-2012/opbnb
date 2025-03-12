@@ -94,12 +94,14 @@ func (bq *BatchQueue) popNextBatch(parent eth.L2BlockRef) *SingularBatch {
 // It also returns the boolean that indicates if the batch is the last block in the batch.
 func (bq *BatchQueue) NextBatch(ctx context.Context, parent eth.L2BlockRef) (*SingularBatch, bool, error) {
 	if len(bq.nextSpan) > 0 {
+		bq.log.Info("print debug state, next span len > 0")
 		// There are cached singular batches derived from the span batch.
 		// Check if the next cached batch matches the given parent block.
 		if bq.nextSpan[0].Timestamp == parent.MillisecondTimestamp()+bq.config.MillisecondBlockInterval() {
 			// Pop first one and return.
 			nextBatch := bq.popNextBatch(parent)
 			// len(bq.nextSpan) == 0 means it's the last batch of the span.
+			bq.log.Info("print debug state, normal return")
 			return nextBatch, len(bq.nextSpan) == 0, nil
 		} else {
 			// Given parent block does not match the next batch. It means the previously returned batch is invalid.
@@ -134,6 +136,7 @@ func (bq *BatchQueue) NextBatch(ctx context.Context, parent eth.L2BlockRef) (*Si
 	// Note: The entire pipeline has the same origin
 	// We just don't accept batches prior to the L1 origin of the L2 safe head
 	if bq.origin != bq.prev.Origin() {
+		bq.log.Info("print debug state, not equal origin")
 		bq.origin = bq.prev.Origin()
 		if !originBehind {
 			bq.l1Blocks = append(bq.l1Blocks, bq.origin)
@@ -143,16 +146,20 @@ func (bq *BatchQueue) NextBatch(ctx context.Context, parent eth.L2BlockRef) (*Si
 			// originBehind is false.
 			bq.l1Blocks = bq.l1Blocks[:0]
 		}
+		// debug, succeed to print here.
 		bq.log.Info("Advancing bq origin", "origin", bq.origin, "originBehind", originBehind)
 	}
 
 	// Load more data into the batch queue
 	outOfData := false
 	if batch, err := bq.prev.NextBatch(ctx); err == io.EOF {
+		bq.log.Info("print debug state, out of data")
 		outOfData = true
 	} else if err != nil {
+		bq.log.Info("print debug state, return err")
 		return nil, false, err
 	} else if !originBehind {
+		bq.log.Info("print debug state, add batch")
 		bq.AddBatch(ctx, batch, parent)
 	}
 
@@ -160,8 +167,10 @@ func (bq *BatchQueue) NextBatch(ctx context.Context, parent eth.L2BlockRef) (*Si
 	// empty the previous stages
 	if originBehind {
 		if outOfData {
+			bq.log.Info("print debug state, originBehind/outOfData eof")
 			return nil, false, io.EOF
 		} else {
+			bq.log.Info("print debug state, not enough data")
 			return nil, false, NotEnoughData
 		}
 	}
@@ -169,22 +178,27 @@ func (bq *BatchQueue) NextBatch(ctx context.Context, parent eth.L2BlockRef) (*Si
 	// Finally attempt to derive more batches
 	batch, err := bq.deriveNextBatch(ctx, outOfData, parent)
 	if err == io.EOF && outOfData {
+		bq.log.Info("print debug state, eof && out of data")
 		return nil, false, io.EOF
 	} else if err == io.EOF {
+		bq.log.Info("print debug state, only eof")
 		return nil, false, NotEnoughData
 	} else if err != nil {
+		bq.log.Info("print debug state, has err", "error", err)
 		return nil, false, err
 	}
 
 	var nextBatch *SingularBatch
 	switch typ := batch.GetBatchType(); typ {
 	case SingularBatchType:
+		bq.log.Info("print debug state, single batch type")
 		singularBatch, ok := batch.AsSingularBatch()
 		if !ok {
 			return nil, false, NewCriticalError(errors.New("failed type assertion to SingularBatch"))
 		}
 		nextBatch = singularBatch
 	case SpanBatchType:
+		bq.log.Info("print debug state, span batch type")
 		spanBatch, ok := batch.AsSpanBatch()
 		if !ok {
 			return nil, false, NewCriticalError(errors.New("failed type assertion to SpanBatch"))
@@ -198,11 +212,13 @@ func (bq *BatchQueue) NextBatch(ctx context.Context, parent eth.L2BlockRef) (*Si
 		// span-batches are non-empty, so the below pop is safe.
 		nextBatch = bq.popNextBatch(parent)
 	default:
+		bq.log.Info("print debug state, unrecognized batch type")
 		return nil, false, NewCriticalError(fmt.Errorf("unrecognized batch type: %d", typ))
 	}
 
 	// If the nextBatch is derived from the span batch, len(bq.nextSpan) == 0 means it's the last batch of the span.
 	// For singular batches, len(bq.nextSpan) == 0 is always true.
+	bq.log.Info("print debug state, normal return")
 	return nextBatch, len(bq.nextSpan) == 0, nil
 }
 
@@ -242,15 +258,17 @@ func (bq *BatchQueue) AddBatch(ctx context.Context, batch Batch, parent eth.L2Bl
 // If no batch can be derived yet, then (nil, io.EOF) is returned.
 func (bq *BatchQueue) deriveNextBatch(ctx context.Context, outOfData bool, parent eth.L2BlockRef) (Batch, error) {
 	if len(bq.l1Blocks) == 0 {
+		bq.log.Info("print debug state, cannot derive next batch")
 		return nil, NewCriticalError(errors.New("cannot derive next batch, no origin was prepared"))
 	}
 	epoch := bq.l1Blocks[0]
-	bq.log.Trace("Deriving the next batch", "epoch", epoch, "parent", parent, "outOfData", outOfData)
+	bq.log.Info("Deriving the next batch", "epoch", epoch, "parent", parent, "outOfData", outOfData)
 
 	// Note: epoch origin can now be one block ahead of the L2 Safe Head
 	// This is in the case where we auto generate all batches in an epoch & advance the epoch
 	// but don't advance the L2 Safe Head's epoch
 	if parent.L1Origin != epoch.ID() && parent.L1Origin.Number != epoch.Number-1 {
+		bq.log.Info("print debug state, this is a reset")
 		return nil, NewResetError(fmt.Errorf("buffered L1 chain epoch %s in batch queue does not match safe head origin %s", epoch, parent.L1Origin))
 	}
 
@@ -268,6 +286,7 @@ batchLoop:
 		validity := CheckBatch(ctx, bq.config, bq.log.New("batch_index", i), bq.l1Blocks, parent, batch, bq.l2)
 		switch validity {
 		case BatchFuture:
+			bq.log.Info("print debug state, batch future")
 			remaining = append(remaining, batch)
 			continue
 		case BatchDrop:
@@ -275,16 +294,19 @@ batchLoop:
 				"parent", parent.ID(),
 				"parent_time", parent.Time,
 			)
+			bq.log.Info("print debug state, batch drop")
 			continue
 		case BatchAccept:
 			nextBatch = batch
 			// don't keep the current batch in the remaining items since we are processing it now,
 			// but retain every batch we didn't get to yet.
 			remaining = append(remaining, bq.batches[i+1:]...)
+			bq.log.Info("print debug state, batch accept")
 			break batchLoop
 		case BatchUndecided:
 			remaining = append(remaining, bq.batches[i:]...)
 			bq.batches = remaining
+			bq.log.Info("print debug state, batch undecided")
 			return nil, io.EOF
 		default:
 			return nil, NewCriticalError(fmt.Errorf("unknown batch validity type: %d", validity))
@@ -303,17 +325,19 @@ batchLoop:
 	forceEmptyBatches := (expiryEpoch == bq.origin.Number && outOfData) || expiryEpoch < bq.origin.Number
 	firstOfEpoch := epoch.Number == parent.L1Origin.Number+1
 
-	bq.log.Trace("Potentially generating an empty batch",
+	bq.log.Info("Potentially generating an empty batch",
 		"expiryEpoch", expiryEpoch, "forceEmptyBatches", forceEmptyBatches, "next_ms_timestamp", nextMilliTimestamp,
 		"epoch_time", epoch.Time, "len_l1_blocks", len(bq.l1Blocks), "firstOfEpoch", firstOfEpoch)
 
 	if !forceEmptyBatches {
 		// sequence window did not expire yet, still room to receive batches for the current epoch,
 		// no need to force-create empty batch(es) towards the next epoch yet.
+		bq.log.Info("print debug state, wait sequence window")
 		return nil, io.EOF
 	}
 	if len(bq.l1Blocks) < 2 {
 		// need next L1 block to proceed towards
+		bq.log.Info("print debug state, need more l1 block")
 		return nil, io.EOF
 	}
 
@@ -334,7 +358,8 @@ batchLoop:
 
 	// At this point we have auto generated every batch for the current epoch
 	// that we can, so we can advance to the next epoch.
-	bq.log.Trace("Advancing internal L1 blocks", "next_ms_timestamp", nextMilliTimestamp, "next_epoch_ms_time", nextEpoch.MillisecondTimestamp())
+	bq.log.Info("Advancing internal L1 blocks", "next_ms_timestamp", nextMilliTimestamp, "next_epoch_ms_time", nextEpoch.MillisecondTimestamp())
 	bq.l1Blocks = bq.l1Blocks[1:]
+	bq.log.Info("print debug state, return eof")
 	return nil, io.EOF
 }

@@ -59,8 +59,10 @@ func (aq *AttributesQueue) Origin() eth.L1BlockRef {
 func (aq *AttributesQueue) NextAttributes(ctx context.Context, parent eth.L2BlockRef) (*AttributesWithParent, error) {
 	// Get a batch if we need it
 	if aq.batch == nil {
+		aq.log.Info("print debug state, aq.batch = nil")
 		batch, isLastInSpan, err := aq.prev.NextBatch(ctx, parent)
 		if err != nil {
+			aq.log.Info("print debug state", "error", err)
 			return nil, err
 		}
 		aq.batch = batch
@@ -68,9 +70,12 @@ func (aq *AttributesQueue) NextAttributes(ctx context.Context, parent eth.L2Bloc
 	}
 
 	// Actually generate the next attributes
+	aq.log.Info("print debug state, create attribute")
 	if attrs, err := aq.createNextAttributes(ctx, aq.batch, parent); err != nil {
+		aq.log.Info("print debug state, failed to create attribute", "error", err)
 		return nil, err
 	} else {
+		aq.log.Info("print debug state, succeed to create attribute")
 		// Clear out the local state once we will succeed
 		attr := AttributesWithParent{attrs, parent, aq.isLastInSpan}
 		aq.batch = nil
