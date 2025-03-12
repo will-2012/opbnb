@@ -82,7 +82,7 @@ func (cb *ChannelBank) prune() {
 func (cb *ChannelBank) IngestFrame(f Frame) {
 	origin := cb.Origin()
 	log := cb.log.New("origin", origin, "channel", f.ID, "length", len(f.Data), "frame_number", f.FrameNumber, "is_last", f.IsLast)
-	log.Debug("channel bank got new data")
+	log.Info("channel bank got new data")
 
 	currentCh, ok := cb.channels[f.ID]
 	if !ok {
@@ -94,7 +94,7 @@ func (cb *ChannelBank) IngestFrame(f Frame) {
 		currentCh = NewChannel(f.ID, origin)
 		cb.channels[f.ID] = currentCh
 		cb.channelQueue = append(cb.channelQueue, f.ID)
-		log.Info("created new channel")
+		log.Info("created new channel", "channel_id", currentCh.id)
 	}
 
 	// check if the channel is not timed out
@@ -144,10 +144,13 @@ func (cb *ChannelBank) Read() (data []byte, err error) {
 	}
 
 	for i := 0; i < len(cb.channelQueue); i++ {
+		log.Info("try read ch, and failed", "channel_id", cb.channelQueue[i], "i", i)
 		if data, err := cb.tryReadChannelAtIndex(i); err == nil {
+			log.Info("succeed to read ch", "i", i)
 			return data, nil
 		}
 	}
+	log.Info("read ch all failed, and eof")
 	return nil, io.EOF
 }
 

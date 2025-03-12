@@ -9,6 +9,7 @@ import (
 
 	"github.com/andybalholm/brotli"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -75,6 +76,7 @@ func (ch *Channel) AddFrame(frame Frame, l1InclusionBlock eth.L1BlockRef) error 
 	if frame.IsLast {
 		ch.endFrameNumber = frame.FrameNumber
 		ch.closed = true
+		log.Info("channel is full", "channel_id", ch.id)
 	}
 	// Prune frames with a number higher than the closing frame number when we receive a closing frame
 	if frame.IsLast && ch.endFrameNumber < ch.highestFrameNumber {

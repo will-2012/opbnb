@@ -69,7 +69,7 @@ func checkSingularBatch(cfg *rollup.Config, log log.Logger, l1Blocks []eth.L1Blo
 
 	nextMilliTimestamp := l2SafeHead.MillisecondTimestamp() + cfg.MillisecondBlockInterval()
 	if batch.Timestamp > nextMilliTimestamp {
-		log.Trace("received out-of-order batch for future processing after next batch", "next_timestamp", nextMilliTimestamp)
+		log.Info("received out-of-order batch for future processing after next batch", "next_timestamp", nextMilliTimestamp)
 		return BatchFuture
 	}
 	if batch.Timestamp < nextMilliTimestamp {

@@ -268,7 +268,13 @@ func (s *channelManager) processBlocks() error {
 		} else if err != nil {
 			return fmt.Errorf("adding block[%d] to channel builder: %w", i, err)
 		}
-		s.log.Debug("Added block to channel", "id", s.currentChannel.ID(), "block", eth.ToBlockID(block))
+
+		milliPart := uint64(0)
+		if block.MixDigest() != (common.Hash{}) {
+			// adapts l2 millisecond, highest 2 bytes as milli-part.
+			milliPart = uint64(eth.Bytes32(block.MixDigest())[0])*256 + uint64(eth.Bytes32(block.MixDigest())[1])
+		}
+		s.log.Info("Added block to channel", "id", s.currentChannel.ID(), "block_id", eth.ToBlockID(block), "block_time", block.Time()*1000+milliPart)
 
 		blocksAdded += 1
 		latestL2ref = l2BlockRefFromBlockAndL1Info(block, l1info)
@@ -292,7 +298,7 @@ func (s *channelManager) processBlocks() error {
 		len(s.blocks),
 		s.currentChannel.InputBytes(),
 		s.currentChannel.ReadyBytes())
-	s.log.Debug("Added blocks to channel",
+	s.log.Info("Added blocks to channel",
 		"blocks_added", blocksAdded,
 		"blocks_pending", len(s.blocks),
 		"channel_full", s.currentChannel.IsFull(),

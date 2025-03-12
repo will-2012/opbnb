@@ -246,10 +246,12 @@ func (bq *BatchQueue) AddBatch(ctx context.Context, batch Batch, parent eth.L2Bl
 	}
 	validity := CheckBatch(ctx, bq.config, bq.log, bq.l1Blocks, parent, &data, bq.l2)
 	if validity == BatchDrop {
+		batch.LogContext(bq.log).Info("print debug state, failed to add batch due to need drop")
 		return // if we do drop the batch, CheckBatch will log the drop reason with WARN level.
 	}
 	batch.LogContext(bq.log).Debug("Adding batch")
 	bq.batches = append(bq.batches, &data)
+	bq.log.Info("print debug state, current batch queue len", "len", len(bq.batches))
 }
 
 // deriveNextBatch derives the next batch to apply on top of the current L2 safe head,
