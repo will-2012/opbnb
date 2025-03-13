@@ -284,9 +284,9 @@ func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.System
 	if err != nil {
 		return NewTemporaryError(fmt.Errorf("failed to fetch the new L1 progress: origin: %v; err: %w", safe.L1Origin, err))
 	}
-	if safe.Time < l1Origin.Time {
+	if safe.MillisecondTimestamp() < l1Origin.MillisecondTimestamp() {
 		return NewResetError(fmt.Errorf("cannot reset block derivation to start at L2 block %s with time %d older than its L1 origin %s with time %d, time invariant is broken",
-			safe, safe.Time, l1Origin, l1Origin.Time))
+			safe, safe.MillisecondTimestamp(), l1Origin, l1Origin.MillisecondTimestamp()))
 	}
 
 	// Walk back L2 chain to find the L1 origin that is old enough to start buffering channel data from.
@@ -318,6 +318,7 @@ func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.System
 		return NewTemporaryError(fmt.Errorf("failed to run pre fetch L1 receipts for L1 start block %s: %w", pipelineOrigin.ID(), err2))
 	}
 	eq.log.Debug("Reset engine queue", "safeHead", safe, "unsafe", unsafe, "safe_timestamp", safe.Time, "unsafe_timestamp", unsafe.Time, "l1Origin", l1Origin)
+	log.Info("set unsafe AAAAAA")
 	eq.ec.SetUnsafeHead(unsafe)
 	eq.ec.SetSafeHead(safe)
 	eq.ec.SetPendingSafeL2Head(safe)

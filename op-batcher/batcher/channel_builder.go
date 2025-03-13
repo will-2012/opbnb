@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 var (
@@ -76,7 +77,7 @@ type ChannelBuilder struct {
 	outputBytes int
 }
 
-// newChannelBuilder creates a new channel builder or returns an error if the
+// NewChannelBuilder creates a new channel builder or returns an error if the
 // channel out could not be created.
 // it acts as a factory for either a span or singular channel out
 func NewChannelBuilder(cfg ChannelConfig, rollupCfg rollup.Config, latestL1OriginBlockNum uint64) (*ChannelBuilder, error) {
@@ -90,6 +91,7 @@ func NewChannelBuilder(cfg ChannelConfig, rollupCfg rollup.Config, latestL1Origi
 	} else {
 		co, err = derive.NewSingularChannelOut(c)
 	}
+	log.Info("print debug state, new a channel", "channel_id", co.ID())
 	if err != nil {
 		return nil, fmt.Errorf("creating channel out: %w", err)
 	}
@@ -158,10 +160,14 @@ func (c *ChannelBuilder) AddBlock(block *types.Block) (*derive.L1BlockInfo, erro
 
 	if err = c.co.AddSingularBatch(batch, l1info.SequenceNumber); errors.Is(err, derive.ErrTooManyRLPBytes) || errors.Is(err, derive.ErrCompressorFull) {
 		c.setFullErr(err)
+		log.Info("print debug state, add l2 block to channel, full", "l2_block_number", block.Number(), "channel_id", c.co.ID())
 		return l1info, c.FullErr()
 	} else if err != nil {
+		log.Info("print debug state, add l2 block to channel, error", "l2_block_number", block.Number(), "channel_id", c.co.ID(), "error", err)
 		return l1info, fmt.Errorf("adding block to channel out: %w", err)
 	}
+
+	log.Info("print debug state, add l2 block to channel", "l2_block_number", block.Number(), "channel_id", c.co.ID())
 
 	c.blocks = append(c.blocks, block)
 	c.updateSwTimeout(batch)

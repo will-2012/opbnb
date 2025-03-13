@@ -269,7 +269,7 @@ func (s *Driver) eventLoop() {
 
 	// Create a ticker to check if there is a gap in the engine queue. Whenever
 	// there is, we send requests to sync source to retrieve the missing payloads.
-	syncCheckInterval := time.Duration(s.config.BlockTime) * time.Second * 2
+	syncCheckInterval := time.Duration(s.config.MillisecondBlockInterval()) * time.Millisecond * 2
 	altSyncTicker := time.NewTicker(syncCheckInterval)
 	defer altSyncTicker.Stop()
 	lastUnsafeL2 := s.engineController.UnsafeL2Head()
@@ -612,7 +612,7 @@ func (s *Driver) SequencerActive(ctx context.Context) (bool, error) {
 // syncStatus returns the current sync status, and should only be called synchronously with
 // the driver event loop to avoid retrieval of an inconsistent status.
 func (s *Driver) syncStatus() *eth.SyncStatus {
-	return &eth.SyncStatus{
+	ss := &eth.SyncStatus{
 		CurrentL1:          s.derivation.Origin(),
 		CurrentL1Finalized: s.finalizer.FinalizedL1(),
 		HeadL1:             s.l1State.L1Head(),
@@ -623,6 +623,8 @@ func (s *Driver) syncStatus() *eth.SyncStatus {
 		FinalizedL2:        s.engineController.Finalized(),
 		PendingSafeL2:      s.engineController.PendingSafeL2Head(),
 	}
+	log.Info("succeed to query sync statue", "sync_status", ss)
+	return ss
 }
 
 // SyncStatus blocks the driver event loop and captures the syncing status.
