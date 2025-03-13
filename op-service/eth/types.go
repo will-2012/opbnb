@@ -346,6 +346,7 @@ func (pa *PayloadAttributes) SetMillisecondTimestamp(ts uint64) {
 	milliPartBytes := uint256.NewInt(ts % 1000).Bytes32()
 	pa.PrevRandao[0] = milliPartBytes[30]
 	pa.PrevRandao[1] = milliPartBytes[31]
+	pa.PrevRandao[2] = 1 // Temporary Marking
 }
 
 type ExecutePayloadStatus string
