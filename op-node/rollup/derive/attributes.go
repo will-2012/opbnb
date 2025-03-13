@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 var (
@@ -179,6 +180,12 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		ParentBeaconBlockRoot: parentBeaconRoot,
 	}
 	pa.SetMillisecondTimestamp(nextL2MilliTime)
+
+	log.Info("succeed to prepare new attribute",
+		"l2_parent", l2Parent,
+		"actual_timestamp",
+		pa.MillisecondTimestamp(),
+		"expected_timestamp", nextL2MilliTime)
 	return pa, nil
 }
 
