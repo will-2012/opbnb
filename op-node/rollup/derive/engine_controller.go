@@ -167,6 +167,7 @@ func (e *EngineController) SetUnsafeHead(r eth.L2BlockRef) {
 	e.unsafeHead = r
 	e.needFCUCall = true
 	e.chainSpec.CheckForkActivation(e.log, r)
+	log.Info("succeed to set unsafe head", "safe_head", r)
 }
 
 // SetBackupUnsafeL2Head implements LocalEngineControl.
@@ -290,6 +291,7 @@ func (e *EngineController) ConfirmPayload(ctx context.Context, agossip async.Asy
 		e.SetBackupUnsafeL2Head(e.unsafeHead, false)
 	}
 	e.unsafeHead = ref
+	log.Info("succeed to update unsafe head", "unsafe", ref)
 
 	e.metrics.RecordL2Ref("l2_unsafe", ref)
 	if e.buildingSafe {
