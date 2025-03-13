@@ -167,7 +167,7 @@ func (e *EngineController) SetUnsafeHead(r eth.L2BlockRef) {
 	e.unsafeHead = r
 	e.needFCUCall = true
 	e.chainSpec.CheckForkActivation(e.log, r)
-	log.Info("succeed to set unsafe head", "safe_head", r)
+	log.Info("succeed to set unsafe head", "unsafe_head", r)
 }
 
 // SetBackupUnsafeL2Head implements LocalEngineControl.
@@ -495,7 +495,8 @@ func (e *EngineController) InsertUnsafePayload(ctx context.Context, envelope *et
 	if needSyncWithEngine {
 		log.Info("engine meet inconsistent, sync status")
 		currentUnsafe, _ := e.engine.L2BlockRefByLabel(ctx, eth.Unsafe)
-		//reset unsafe
+		// reset unsafe
+		log.Info("set unsafe A")
 		e.SetUnsafeHead(currentUnsafe)
 		fc.HeadBlockHash = currentUnsafe.Hash
 
@@ -548,12 +549,14 @@ func (e *EngineController) InsertUnsafePayload(ctx context.Context, envelope *et
 	e.needFCUCall = false
 	// unsafe will update to the latest broadcast block anyway, this will trigger an el sync in geth when meet an inconsistent state and accelerate recover progress.
 	if e.checkUpdateUnsafeHead(fcRes.PayloadStatus.Status) {
+		log.Info("set unsafe AA")
 		e.SetUnsafeHead(ref)
 	}
 
 	if e.syncStatus == syncStatusFinishedELButNotFinalized {
 		e.log.Info("Finished EL sync", "sync_duration", e.clock.Since(e.elStart), "finalized_block", ref.ID().String())
 		e.syncStatus = syncStatusFinishedEL
+		log.Info("set unsafe AAA")
 		e.SetUnsafeHead(ref)
 	}
 
@@ -620,6 +623,7 @@ func (e *EngineController) TryBackupUnsafeReorg(ctx context.Context) (bool, erro
 	if fcRes.PayloadStatus.Status == eth.ExecutionValid {
 		// Execution engine accepted the reorg.
 		e.log.Info("successfully reorged unsafe head using backupUnsafe", "unsafe", e.backupUnsafeHead.ID())
+		log.Info("set unsafe AAAA")
 		e.SetUnsafeHead(e.BackupUnsafeL2Head())
 		e.SetBackupUnsafeL2Head(eth.L2BlockRef{}, false)
 		return true, nil
@@ -680,6 +684,7 @@ func (e *EngineController) resetSafeAndFinalizedHead(currentL2Info *sync.FindHea
 	var needResetSafeHead, needResetFinalizedHead bool
 
 	log.Info("engine has inconsistent state", "unsafe", currentL2Info.Unsafe.Number, "safe", currentL2Info.Safe.Number, "final", currentL2Info.Finalized.Number)
+	log.Info("set unsafe AAAAA")
 	e.SetUnsafeHead(currentL2Info.Unsafe)
 
 	if currentL2Info.Safe.Number > currentL2Info.Unsafe.Number {

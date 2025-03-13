@@ -318,6 +318,7 @@ func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.System
 		return NewTemporaryError(fmt.Errorf("failed to run pre fetch L1 receipts for L1 start block %s: %w", pipelineOrigin.ID(), err2))
 	}
 	eq.log.Debug("Reset engine queue", "safeHead", safe, "unsafe", unsafe, "safe_timestamp", safe.Time, "unsafe_timestamp", unsafe.Time, "l1Origin", l1Origin)
+	log.Info("set unsafe AAAAAA")
 	eq.ec.SetUnsafeHead(unsafe)
 	eq.ec.SetSafeHead(safe)
 	eq.ec.SetPendingSafeL2Head(safe)
