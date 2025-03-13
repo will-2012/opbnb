@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/holiman/uint256"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // PayloadToBlockRef extracts the essential L2BlockRef information from an execution payload,
@@ -41,15 +41,21 @@ func PayloadToBlockRef(rollupCfg *rollup.Config, payload *eth.ExecutionPayload) 
 		sequenceNumber = info.SequenceNumber
 	}
 
-	return eth.L2BlockRef{
+	// adapts millisecond part
+	milliPart := uint64(0)
+	milliPart = uint64(payload.PrevRandao[0])*256 + uint64(payload.PrevRandao[1])
+
+	l2Ref := eth.L2BlockRef{
 		Hash:           payload.BlockHash,
 		Number:         uint64(payload.BlockNumber),
 		ParentHash:     payload.ParentHash,
 		Time:           uint64(payload.Timestamp),
-		MilliTime:      uint256.NewInt(0).SetBytes32(payload.PrevRandao[:]).Uint64(), // adapts millisecond part
+		MilliTime:      milliPart,
 		L1Origin:       l1Origin,
 		SequenceNumber: sequenceNumber,
-	}, nil
+	}
+	log.Info("succeed to convert payload to l2 block ref", "l2_block", l2Ref)
+	return l2Ref, nil
 }
 
 func PayloadToSystemConfig(rollupCfg *rollup.Config, payload *eth.ExecutionPayload) (eth.SystemConfig, error) {
