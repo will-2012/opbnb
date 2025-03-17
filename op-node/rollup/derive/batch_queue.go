@@ -96,7 +96,15 @@ func (bq *BatchQueue) NextBatch(ctx context.Context, parent eth.L2BlockRef) (*Si
 	if len(bq.nextSpan) > 0 {
 		// There are cached singular batches derived from the span batch.
 		// Check if the next cached batch matches the given parent block.
-		if bq.nextSpan[0].Timestamp == parent.MillisecondTimestamp()+bq.config.MillisecondBlockInterval() {
+		// TODO:
+		expectedNextTs := uint64(0)
+		if bq.config.IsVolta(parent.Time) { // millisecond
+			expectedNextTs = parent.MillisecondTimestamp() + bq.config.MillisecondBlockIntervalV2(parent.Time)
+		} else { // second
+			expectedNextTs = parent.Time + bq.config.BlockTime
+		}
+
+		if bq.nextSpan[0].Timestamp == expectedNextTs {
 			// Pop first one and return.
 			nextBatch := bq.popNextBatch(parent)
 			// len(bq.nextSpan) == 0 means it's the last batch of the span.

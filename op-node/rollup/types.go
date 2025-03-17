@@ -128,6 +128,10 @@ type Config struct {
 	// Active if SnowTime != nil && L2 block timestamp >= *SnowTime, inactive otherwise.
 	SnowTime *uint64 `json:"snow_time,omitempty"`
 
+	// VoltaTime sets the activation time of the VoltaTime network upgrade.
+	// Active if VoltaTime != nil && L2 block timestamp >= *VoltaTime, inactive otherwise.
+	VoltaTime *uint64 `json:"volta_time,omitempty"`
+
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
 
@@ -168,9 +172,19 @@ func (cfg *Config) MillisecondBlockInterval() uint64 {
 	return cfg.BlockTime * 1000
 }
 
+const millisecondBlockIntervalVolta = 500
+
+func (cfg *Config) MillisecondBlockIntervalV2(secondTimeStamp uint64) uint64 {
+	if cfg.IsVolta(secondTimeStamp) {
+		return millisecondBlockIntervalVolta
+	}
+	return cfg.BlockTime * 1000
+}
+
 // SecondBlockInterval returns second block interval, which has compatible conversions.
 // Mainly used to compatible to history fork time.
 func (cfg *Config) SecondBlockInterval() uint64 {
+	// TODO:
 	if cfg.BlockTime <= 3 {
 		return cfg.BlockTime
 	}
@@ -453,6 +467,17 @@ func (c *Config) IsFjordActivationBlock(l2BlockTime uint64) bool {
 // IsInterop returns true if the Interop hardfork is active at or past the given timestamp.
 func (c *Config) IsInterop(timestamp uint64) bool {
 	return c.InteropTime != nil && timestamp >= *c.InteropTime
+}
+
+func (c *Config) IsVolta(timestamp uint64) bool {
+	return c.VoltaTime != nil && timestamp >= *c.VoltaTime
+}
+
+func (c *Config) IsVoltaActivationBlock(l2BlockTime uint64) bool {
+	// TODO:
+	return c.IsVolta(l2BlockTime) &&
+		l2BlockTime*1000 >= c.MillisecondBlockIntervalV2(l2BlockTime) &&
+		!c.IsVolta((l2BlockTime*1000-c.MillisecondBlockIntervalV2(l2BlockTime))/1000)
 }
 
 func (c *Config) IsRegolithActivationBlock(l2BlockTime uint64) bool {

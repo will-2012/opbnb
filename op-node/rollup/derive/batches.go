@@ -67,13 +67,21 @@ func checkSingularBatch(cfg *rollup.Config, log log.Logger, l1Blocks []eth.L1Blo
 	}
 	epoch := l1Blocks[0]
 
-	nextMilliTimestamp := l2SafeHead.MillisecondTimestamp() + cfg.MillisecondBlockInterval()
-	if batch.Timestamp > nextMilliTimestamp {
-		log.Trace("received out-of-order batch for future processing after next batch", "next_timestamp", nextMilliTimestamp)
+	expectedNextTs := uint64(0)
+	if cfg.IsVolta(l2SafeHead.Time) {
+		expectedNextTs = l2SafeHead.MillisecondTimestamp() + cfg.MillisecondBlockIntervalV2(l2SafeHead.Time)
+	} else {
+		expectedNextTs = l2SafeHead.Time + cfg.BlockTime
+	}
+
+	// TODO:
+	//nextMilliTimestamp := l2SafeHead.MillisecondTimestamp() + cfg.MillisecondBlockInterval()
+	if batch.Timestamp > expectedNextTs {
+		log.Trace("received out-of-order batch for future processing after next batch", "next_timestamp", expectedNextTs)
 		return BatchFuture
 	}
-	if batch.Timestamp < nextMilliTimestamp {
-		log.Warn("dropping batch with old timestamp", "batch_timestamp", batch.Timestamp, "min_timestamp", nextMilliTimestamp)
+	if batch.Timestamp < expectedNextTs {
+		log.Warn("dropping batch with old timestamp", "batch_timestamp", batch.Timestamp, "min_timestamp", expectedNextTs)
 		return BatchDrop
 	}
 
@@ -118,14 +126,20 @@ func checkSingularBatch(cfg *rollup.Config, log log.Logger, l1Blocks []eth.L1Blo
 		return BatchDrop
 	}
 
-	if batch.Timestamp < batchOrigin.MillisecondTimestamp() {
-		log.Warn("batch timestamp is less than L1 origin timestamp", "l2_ms_timestamp", batch.Timestamp, "l1_ms_timestamp", batchOrigin.MillisecondTimestamp(), "origin", batchOrigin.ID())
+	// TODO:
+	batchMillisecondTimestamp := batch.Timestamp
+	if !cfg.IsVolta(batch.Timestamp) {
+		batchMillisecondTimestamp = batch.Timestamp * 1000
+	}
+
+	if batchMillisecondTimestamp < batchOrigin.MillisecondTimestamp() {
+		log.Warn("batch timestamp is less than L1 origin timestamp", "l2_ms_timestamp", batchMillisecondTimestamp, "l1_ms_timestamp", batchOrigin.MillisecondTimestamp(), "origin", batchOrigin.ID())
 		return BatchDrop
 	}
 
 	spec := rollup.NewChainSpec(cfg)
 	// Check if we ran out of sequencer time drift
-	if max := batchOrigin.MillisecondTimestamp() + spec.MaxSequencerDrift(batchOrigin.Time)*1000; batch.Timestamp > max {
+	if max := batchOrigin.MillisecondTimestamp() + spec.MaxSequencerDrift(batchOrigin.Time)*1000; batchMillisecondTimestamp > max {
 		if len(batch.Transactions) == 0 {
 			// If the sequencer is co-operating by producing an empty batch,
 			// then allow the batch if it was the right thing to do to maintain the L2 time >= L1 time invariant.
@@ -136,7 +150,8 @@ func checkSingularBatch(cfg *rollup.Config, log log.Logger, l1Blocks []eth.L1Blo
 					return BatchUndecided
 				}
 				nextOrigin := l1Blocks[1]
-				if batch.Timestamp >= nextOrigin.MillisecondTimestamp() { // check if the next L1 origin could have been adopted
+				// TODO:
+				if batchMillisecondTimestamp >= nextOrigin.MillisecondTimestamp() { // check if the next L1 origin could have been adopted
 					log.Info("batch exceeded sequencer time drift without adopting next origin, and next L1 origin would have been valid")
 					return BatchDrop
 				} else {
@@ -194,6 +209,7 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 		return BatchDrop
 	}
 
+	// TODO:
 	nextMilliTimestamp := l2SafeHead.MillisecondTimestamp() + cfg.MillisecondBlockInterval()
 
 	if batch.GetTimestamp() > nextMilliTimestamp {

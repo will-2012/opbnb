@@ -32,6 +32,7 @@ var ErrTooBigSpanBatchSize = errors.New("span batch size limit reached")
 var ErrEmptySpanBatch = errors.New("span-batch must not be empty")
 
 type spanBatchPrefix struct {
+	isVolta       bool
 	relTimestamp  uint64   // Relative timestamp of the first block, millisecond
 	l1OriginNum   uint64   // L1 origin number
 	parentCheck   [20]byte // First 20 bytes of the first block's parent hash
@@ -76,6 +77,8 @@ func (bp *spanBatchPrefix) decodeRelTimestamp(r *bytes.Reader) error {
 		return fmt.Errorf("failed to read rel timestamp: %w", err)
 	}
 	bp.relTimestamp = relTimestamp
+	// TODO:
+
 	return nil
 }
 
@@ -341,6 +344,8 @@ func (b *RawSpanBatch) encode(w io.Writer) error {
 // derive converts RawSpanBatch into SpanBatch, which has a list of SpanBatchElement.
 // We need chain config constants to derive values for making payload attributes.
 func (b *RawSpanBatch) derive(milliBlockInterval, genesisTimestamp uint64, chainID *big.Int) (*SpanBatch, error) {
+	// TODO:
+
 	if b.blockCount == 0 {
 		return nil, ErrEmptySpanBatch
 	}
@@ -379,10 +384,67 @@ func (b *RawSpanBatch) derive(milliBlockInterval, genesisTimestamp uint64, chain
 	return &spanBatch, nil
 }
 
+func (b *RawSpanBatch) deriveV2(cfg *rollup.Config) (*SpanBatch, error) {
+	if b.blockCount == 0 {
+		return nil, ErrEmptySpanBatch
+	}
+	blockOriginNums := make([]uint64, b.blockCount)
+	l1OriginBlockNumber := b.l1OriginNum
+	for i := int(b.blockCount) - 1; i >= 0; i-- {
+		blockOriginNums[i] = l1OriginBlockNumber
+		if b.originBits.Bit(i) == 1 && i > 0 {
+			l1OriginBlockNumber--
+		}
+	}
+
+	if err := b.txs.recoverV(cfg.L2ChainID); err != nil {
+		return nil, err
+	}
+	fullTxs, err := b.txs.fullTxs(cfg.L2ChainID)
+	if err != nil {
+		return nil, err
+	}
+
+	spanBatch := SpanBatch{
+		ParentCheck:   b.parentCheck,
+		L1OriginCheck: b.l1OriginCheck,
+	}
+	txIdx := 0
+	for i := 0; i < int(b.blockCount); i++ {
+		batch := SpanBatchElement{}
+		// tryBatchTs is not an accurate timestamp and may be larger than the actual time;
+		// therefore, it does not affect the fork decision
+		tryBatchTs := cfg.Genesis.L2Time + b.relTimestamp
+		if cfg.IsVolta(tryBatchTs) {
+			batch.Timestamp = cfg.Genesis.L2Time*1000 + b.relTimestamp + cfg.MillisecondBlockIntervalV2(tryBatchTs)*uint64(i) // milli second
+			batch.IsVolta = true
+		} else {
+			batch.Timestamp = cfg.Genesis.L2Time + b.relTimestamp + cfg.BlockTime*uint64(i) // second
+		}
+		batch.EpochNum = rollup.Epoch(blockOriginNums[i])
+		for j := 0; j < int(b.blockTxCounts[i]); j++ {
+			batch.Transactions = append(batch.Transactions, fullTxs[txIdx])
+			txIdx++
+		}
+		spanBatch.Batches = append(spanBatch.Batches, &batch)
+	}
+	return &spanBatch, nil
+}
+
 // ToSpanBatch converts RawSpanBatch to SpanBatch,
 // which implements a wrapper of derive method of RawSpanBatch
 func (b *RawSpanBatch) ToSpanBatch(blockTime, genesisTimestamp uint64, chainID *big.Int) (*SpanBatch, error) {
 	spanBatch, err := b.derive(blockTime, genesisTimestamp, chainID)
+	if err != nil {
+		return nil, err
+	}
+	return spanBatch, nil
+}
+
+// ToSpanBatchV2 converts RawSpanBatch to SpanBatch,
+// which implements a wrapper of derive method of RawSpanBatch
+func (b *RawSpanBatch) ToSpanBatchV2(cfg *rollup.Config) (*SpanBatch, error) {
+	spanBatch, err := b.deriveV2(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -394,6 +456,7 @@ func (b *RawSpanBatch) ToSpanBatch(blockTime, genesisTimestamp uint64, chainID *
 // because Span batch spec does not contain parent hash and epoch hash of every block in the span.
 type SpanBatchElement struct {
 	EpochNum     rollup.Epoch // aka l1 num
+	IsVolta      bool
 	Timestamp    uint64
 	Transactions []hexutil.Bytes
 }
@@ -402,7 +465,8 @@ type SpanBatchElement struct {
 func singularBatchToElement(singularBatch *SingularBatch) *SpanBatchElement {
 	return &SpanBatchElement{
 		EpochNum:     singularBatch.EpochNum,
-		Timestamp:    singularBatch.Timestamp, // ms
+		IsVolta:      singularBatch.IsVolta,
+		Timestamp:    singularBatch.Timestamp,
 		Transactions: singularBatch.Transactions,
 	}
 }
@@ -555,9 +619,17 @@ func (b *SpanBatch) ToRawSpanBatch() (*RawSpanBatch, error) {
 	span_start := b.Batches[0]
 	span_end := b.Batches[len(b.Batches)-1]
 
+	// TODO:
+	relTs := uint64(0)
+	if span_start.IsVolta { // millisecond unit
+		relTs = span_start.Timestamp - b.MillisecondGenesisTimestamp()
+	} else { // second unit
+		relTs = span_start.Timestamp - b.GenesisTimestamp
+	}
+
 	return &RawSpanBatch{
 		spanBatchPrefix: spanBatchPrefix{
-			relTimestamp:  span_start.Timestamp - b.MillisecondGenesisTimestamp(),
+			relTimestamp:  relTs,
 			l1OriginNum:   uint64(span_end.EpochNum),
 			parentCheck:   b.ParentCheck,
 			l1OriginCheck: b.L1OriginCheck,
@@ -581,6 +653,7 @@ func (b *SpanBatch) GetSingularBatches(l1Origins []eth.L1BlockRef, l2SafeHead et
 	var singularBatches []*SingularBatch
 	originIdx := 0
 	for _, batch := range b.Batches {
+		// TODO: ignore it
 		if batch.Timestamp <= l2SafeHead.MillisecondTimestamp() {
 			continue
 		}
@@ -611,6 +684,7 @@ func NewSpanBatch(genesisTimestamp uint64, chainID *big.Int) *SpanBatch {
 	// newSpanBatchTxs can't fail with empty txs
 	sbtxs, _ := newSpanBatchTxs([][]byte{}, chainID)
 	return &SpanBatch{
+		// TODO:
 		GenesisTimestamp: genesisTimestamp,
 		ChainID:          chainID,
 		originBits:       big.NewInt(0),
@@ -626,6 +700,15 @@ func DeriveSpanBatch(batchData *BatchData, blockTime, genesisTimestamp uint64, c
 	}
 	// If the batch type is Span batch, derive block inputs from RawSpanBatch.
 	return rawSpanBatch.ToSpanBatch(blockTime, genesisTimestamp, chainID)
+}
+
+func DeriveSpanBatchV2(batchData *BatchData, cfg *rollup.Config) (*SpanBatch, error) {
+	rawSpanBatch, ok := batchData.inner.(*RawSpanBatch)
+	if !ok {
+		return nil, NewCriticalError(errors.New("failed type assertion to SpanBatch"))
+	}
+	// If the batch type is Span batch, derive block inputs from RawSpanBatch.
+	return rawSpanBatch.ToSpanBatchV2(cfg)
 }
 
 // ReadTxData reads raw RLP tx data from reader and returns txData and txType
