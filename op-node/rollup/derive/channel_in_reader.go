@@ -91,6 +91,7 @@ func (cr *ChannelInReader) NextBatch(ctx context.Context) (Batch, error) {
 	batch := batchWithMetadata{comprAlgo: batchData.ComprAlgo}
 	switch batchData.GetBatchType() {
 	case SingularBatchType:
+		// TODO:
 		batch.Batch, err = GetSingularBatch(batchData)
 		if err != nil {
 			return nil, err
@@ -105,7 +106,9 @@ func (cr *ChannelInReader) NextBatch(ctx context.Context) (Batch, error) {
 			// This is just for early dropping invalid batches as soon as possible.
 			return nil, NewTemporaryError(fmt.Errorf("cannot accept span batch in L1 block %s at time %d", origin, origin.Time))
 		}
-		batch.Batch, err = DeriveSpanBatch(batchData, cr.cfg.BlockTime, cr.cfg.Genesis.L2Time, cr.cfg.L2ChainID)
+		// TODO:
+		// batch.Batch, err = DeriveSpanBatch(batchData, cr.cfg.BlockTime, cr.cfg.Genesis.L2Time, cr.cfg.L2ChainID)
+		batch.Batch, err = DeriveSpanBatchV2(batchData, cr.cfg)
 		if err != nil {
 			return nil, err
 		}

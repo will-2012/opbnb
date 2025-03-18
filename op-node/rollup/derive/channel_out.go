@@ -8,6 +8,8 @@ import (
 	"io"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -234,16 +236,31 @@ func BlockToSingularBatch(rollupCfg *rollup.Config, block *types.Block) (*Singul
 	if l1InfoTx.Type() != types.DepositTxType {
 		return nil, nil, ErrNotDepositTx
 	}
-	l1Info, err := L1BlockInfoFromBytes(rollupCfg, block.Time(), l1InfoTx.Data())
+	l1Info, err := L1BlockInfoFromBytes(rollupCfg, block.Time() /*second timestamp for fork*/, l1InfoTx.Data())
 	if err != nil {
 		return nil, l1Info, fmt.Errorf("could not parse the L1 Info deposit: %w", err)
 	}
 
+	ts := uint64(0)
+	isVolta := rollupCfg.IsVolta(block.Time())
+	if isVolta { // after volta fork
+		milliPart := uint64(0)
+		if block.MixDigest() != (common.Hash{}) {
+			milliPart = uint64(eth.Bytes32(block.MixDigest())[0])*256 + uint64(eth.Bytes32(block.MixDigest())[1])
+		}
+		ts = block.Time()*1000 + milliPart
+	} else { // before volta fork
+		ts = block.Time()
+	}
+
 	return &SingularBatch{
-		ParentHash:   block.ParentHash(),
-		EpochNum:     rollup.Epoch(l1Info.Number),
-		EpochHash:    l1Info.BlockHash,
-		Timestamp:    block.Time(),
+		ParentHash: block.ParentHash(),
+		EpochNum:   rollup.Epoch(l1Info.Number),
+		EpochHash:  l1Info.BlockHash,
+		IsVolta:    isVolta,
+		// before volta fork, the timestamp is second timestamp
+		// after volta fork, the timestamp is millisecond timestamp
+		Timestamp:    ts,
 		Transactions: opaqueTxs,
 	}, l1Info, nil
 }
