@@ -265,6 +265,7 @@ func (bq *BatchQueue) deriveNextBatch(ctx context.Context, outOfData bool, paren
 	// Find the first-seen batch that matches all validity conditions.
 	// We may not have sufficient information to proceed filtering, and then we stop.
 	// There may be none: in that case we force-create an empty batch
+	// TODO:
 	nextMilliTimestamp := parent.MillisecondTimestamp() + bq.config.MillisecondBlockInterval()
 	var nextBatch *BatchWithL1InclusionBlock
 
