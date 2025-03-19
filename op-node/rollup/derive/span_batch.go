@@ -590,7 +590,7 @@ func (b *SpanBatch) ToRawSpanBatch(cfg *rollup.Config) (*RawSpanBatch, error) {
 	if cfg.IsVolta(span_start.Timestamp) {
 		relTs = span_start.Timestamp - b.MillisecondGenesisTimestamp()
 	} else {
-		relTs = span_start.Timestamp + b.GenesisTimestamp
+		relTs = span_start.Timestamp - b.GenesisTimestamp
 	}
 	log.Info("succeed to make raw span_batch",
 		"span_start_timestamp", span_start.Timestamp,
