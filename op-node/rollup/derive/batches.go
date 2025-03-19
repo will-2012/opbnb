@@ -219,7 +219,11 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 
 	nextMilliTimestamp := cfg.NextMillisecondBlockTime(l2SafeHead.MillisecondTimestamp())
 
-	log.Warn("try derive, checkSpanBatch second", "l2SafeHead", l2SafeHead, "nextMilliTimestamp", nextMilliTimestamp, "batch", batch)
+	log.Warn("try derive, checkSpanBatch second", "l2SafeHead", l2SafeHead, "nextMilliTimestamp", nextMilliTimestamp, "batch.GetTimestamp()", batch.GetTimestamp(), "batch", batch)
+
+	for i, b := range batch.Batches {
+		log.Info("try derive, checkSpanBatch info", "index", i, "Timestamp", b.Timestamp, "EpochNum", b.EpochNum)
+	}
 
 	if batch.GetTimestamp() > nextMilliTimestamp {
 		log.Trace("received out-of-order batch for future processing after next batch", "next_ms_timestamp", nextMilliTimestamp)
