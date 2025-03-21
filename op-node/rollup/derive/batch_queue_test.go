@@ -508,7 +508,7 @@ func BatchQueueMissing(t *testing.T, batchType int) {
 	// Check for generated batch at t = 14
 	b, _, e = bq.NextBatch(context.Background(), safeHead)
 	require.Nil(t, e)
-	require.Equal(t, b.Timestamp, uint64(14000))
+	require.Equal(t, b.Timestamp, uint64(14))
 	require.Empty(t, b.Transactions)
 	require.Equal(t, rollup.Epoch(0), b.EpochNum)
 	safeHead.Number += 1
