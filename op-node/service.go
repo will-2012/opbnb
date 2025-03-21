@@ -27,11 +27,11 @@ import (
 	opflags "github.com/ethereum-optimism/optimism/op-service/flags"
 )
 
-const (
-	minSecondBlockInterval      = 1
-	maxSecondBlockInterval      = 3
-	maxMillisecondBlockInterval = 750
-)
+//const (
+//	//minSecondBlockInterval      = 1
+//	//maxSecondBlockInterval      = 3
+//	//maxMillisecondBlockInterval = 750
+//)
 
 // NewConfig creates a Config from the provided flags or environment variables.
 func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
