@@ -101,10 +101,10 @@ func singularBatchToPayload(t *testing.T, batch *SingularBatch, blockNumber uint
 	txs = append(txs, batch.Transactions...)
 	return eth.ExecutionPayloadEnvelope{
 		ExecutionPayload: &eth.ExecutionPayload{
-			BlockHash:    mockHash(batch.Timestamp/1000, 2),
+			BlockHash:    mockHash(batch.Timestamp, 2),
 			ParentHash:   batch.ParentHash,
 			BlockNumber:  hexutil.Uint64(blockNumber),
-			Timestamp:    hexutil.Uint64(batch.Timestamp / 1000),
+			Timestamp:    hexutil.Uint64(batch.Timestamp),
 			Transactions: txs,
 		},
 	}
@@ -112,7 +112,7 @@ func singularBatchToPayload(t *testing.T, batch *SingularBatch, blockNumber uint
 
 func singularBatchToBlockRef(t *testing.T, batch *SingularBatch, blockNumber uint64) eth.L2BlockRef {
 	return eth.L2BlockRef{
-		Hash:       mockHash(batch.Timestamp/1000, 2),
+		Hash:       mockHash(batch.Timestamp, 2),
 		Number:     blockNumber,
 		ParentHash: batch.ParentHash,
 		Time:       batch.Timestamp,
@@ -412,7 +412,7 @@ func BatchQueueInvalidInternalAdvance(t *testing.T, batchType int) {
 	require.Nil(t, e)
 	require.NotNil(t, b)
 	require.Equal(t, rollup.Epoch(2), b.EpochNum)
-	require.Equal(t, (safeHead.Time+2)*1000, b.Timestamp)
+	require.Equal(t, safeHead.Time+2, b.Timestamp)
 	safeHead.Number += 1
 	safeHead.Time += 2
 	safeHead.Hash = mockHash(b.Timestamp, 2)
@@ -999,7 +999,7 @@ func TestBatchQueueResetSpan(t *testing.T) {
 	// This NextBatch() will return the second singular batch.
 	safeHead.Number += 1
 	safeHead.Time += cfg.BlockTime
-	safeHead.Hash = mockHash(nextBatch.Timestamp/1000, 2)
+	safeHead.Hash = mockHash(nextBatch.Timestamp, 2)
 	safeHead.L1Origin = nextBatch.Epoch()
 	nextBatch, _, err = bq.NextBatch(context.Background(), safeHead)
 	require.NoError(t, err)
