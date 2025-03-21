@@ -24,15 +24,22 @@ type ValidBatchTestCase struct {
 	L2SafeHead     eth.L2BlockRef
 	Batch          BatchWithL1InclusionBlock
 	Expected       BatchValidity
-	ExpectedLog    string               // log message that must be included
-	NotExpectedLog string               // log message that must not be included
-	ConfigMod      func(*rollup.Config) // optional rollup config mod
+	ExpectedLog    string                                    // log message that must be included
+	NotExpectedLog string                                    // log message that must not be included
+	ConfigMod      func(*rollup.Config, *ValidBatchTestCase) // optional rollup config mod
 }
 
 var zero64 = uint64(0)
 
-func deltaAtGenesis(c *rollup.Config) {
+func deltaAtGenesis(c *rollup.Config, t *ValidBatchTestCase) {
 	c.DeltaTime = &zero64
+	_ = t
+}
+
+func setDeltaAndL2Time(c *rollup.Config, t *ValidBatchTestCase) {
+	c.DeltaTime = &zero64
+	_ = t
+	c.Genesis.L2Time = t.L2SafeHead.Number - t.L2SafeHead.Time
 }
 
 //func deltaAt(t *uint64) func(*rollup.Config) {
@@ -1583,7 +1590,7 @@ func TestValidBatch(t *testing.T) {
 		ctx := context.Background()
 		rcfg := defaultConf()
 		if mod := testCase.ConfigMod; mod != nil {
-			mod(rcfg)
+			mod(rcfg, &testCase)
 		}
 		// TODO
 		validity := CheckBatch(ctx, rcfg, logger, testCase.L1Blocks, testCase.L2SafeHead, &testCase.Batch, &l2Client)
@@ -1682,6 +1689,7 @@ func TestValidBatch(t *testing.T) {
 	}
 	l2Client.Mock.On("PayloadByNumber", l2B1.Number).Return(&payload, &nilErr).Once()
 
+	// TODO: TargetBlockNumber
 	invalidTxTestCase := ValidBatchTestCase{
 		Name:       "invalid_tx_overlapping_batch",
 		L1Blocks:   []eth.L1BlockRef{l1B},
@@ -1707,7 +1715,7 @@ func TestValidBatch(t *testing.T) {
 		},
 		Expected:    BatchDrop,
 		ExpectedLog: "failed to extract L2BlockRef from execution payload",
-		ConfigMod:   deltaAtGenesis,
+		ConfigMod:   setDeltaAndL2Time,
 	}
 
 	t.Run(invalidTxTestCase.Name, func(t *testing.T) {

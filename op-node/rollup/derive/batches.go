@@ -219,6 +219,7 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 			log.Warn("batch has misaligned timestamp, not overlapped exactly")
 			return BatchDrop
 		}
+		// TODO:
 		currentNum, err := cfg.TargetBlockNumber(batch.GetTimestamp())
 		if err != nil {
 			log.Warn("failed to computer batch number", "batch_ms_time", batch.GetTimestamp(), "err", err)
