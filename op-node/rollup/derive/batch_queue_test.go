@@ -112,7 +112,7 @@ func singularBatchToPayload(t *testing.T, batch *SingularBatch, blockNumber uint
 
 func singularBatchToBlockRef(t *testing.T, batch *SingularBatch, blockNumber uint64) eth.L2BlockRef {
 	return eth.L2BlockRef{
-		Hash:       mockHash(batch.Timestamp, 2),
+		Hash:       mockHash(batch.Timestamp/1000, 2),
 		Number:     blockNumber,
 		ParentHash: batch.ParentHash,
 		Time:       batch.Timestamp / 1000, // second timestamp
