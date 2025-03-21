@@ -55,7 +55,7 @@ func b(chainId *big.Int, timestamp uint64, epoch eth.L1BlockRef) *SingularBatch 
 	txData, _ := tx.MarshalBinary()
 	return &SingularBatch{
 		ParentHash:   mockHash(timestamp-2, 2),
-		Timestamp:    timestamp * 1000,
+		Timestamp:    timestamp,
 		EpochNum:     rollup.Epoch(epoch.Number),
 		EpochHash:    epoch.Hash,
 		Transactions: []hexutil.Bytes{txData},
@@ -296,7 +296,7 @@ func BatchQueueEager(t *testing.T, batchType int) {
 			require.Equal(t, expectedOutputBatches[i], b)
 			safeHead.Number += 1
 			safeHead.Time += cfg.BlockTime
-			safeHead.Hash = mockHash(b.Timestamp/1000, 2)
+			safeHead.Hash = mockHash(b.Timestamp, 2)
 			safeHead.L1Origin = b.Epoch()
 		}
 	}
@@ -373,7 +373,7 @@ func BatchQueueInvalidInternalAdvance(t *testing.T, batchType int) {
 			require.Equal(t, expectedOutputBatches[i], b)
 			safeHead.Number += 1
 			safeHead.Time += 2
-			safeHead.Hash = mockHash(b.Timestamp/1000, 2)
+			safeHead.Hash = mockHash(b.Timestamp, 2)
 			safeHead.L1Origin = b.Epoch()
 		}
 	}
@@ -396,7 +396,7 @@ func BatchQueueInvalidInternalAdvance(t *testing.T, batchType int) {
 	b, _, e = bq.NextBatch(context.Background(), safeHead)
 	require.Nil(t, e)
 	require.NotNil(t, b)
-	require.Equal(t, (safeHead.Time+2)*1000, b.Timestamp)
+	require.Equal(t, safeHead.Time+2, b.Timestamp)
 	require.Equal(t, rollup.Epoch(1), b.EpochNum)
 	safeHead.Number += 1
 	safeHead.Time += 2
@@ -498,12 +498,12 @@ func BatchQueueMissing(t *testing.T, batchType int) {
 	// Check for a generated batch at t = 12
 	b, _, e = bq.NextBatch(context.Background(), safeHead)
 	require.Nil(t, e)
-	require.Equal(t, b.Timestamp, uint64(12000))
+	require.Equal(t, b.Timestamp, uint64(12))
 	require.Empty(t, b.Transactions)
 	require.Equal(t, rollup.Epoch(0), b.EpochNum)
 	safeHead.Number += 1
 	safeHead.Time += 2
-	safeHead.Hash = mockHash(b.Timestamp/1000, 2)
+	safeHead.Hash = mockHash(b.Timestamp, 2)
 
 	// Check for generated batch at t = 14
 	b, _, e = bq.NextBatch(context.Background(), safeHead)
@@ -513,7 +513,7 @@ func BatchQueueMissing(t *testing.T, batchType int) {
 	require.Equal(t, rollup.Epoch(0), b.EpochNum)
 	safeHead.Number += 1
 	safeHead.Time += 2
-	safeHead.Hash = mockHash(b.Timestamp/1000, 2)
+	safeHead.Hash = mockHash(b.Timestamp, 2)
 
 	// Check for the inputted batch at t = 16
 	b, _, e = bq.NextBatch(context.Background(), safeHead)
@@ -522,7 +522,7 @@ func BatchQueueMissing(t *testing.T, batchType int) {
 	require.Equal(t, rollup.Epoch(0), b.EpochNum)
 	safeHead.Number += 1
 	safeHead.Time += 2
-	safeHead.Hash = mockHash(b.Timestamp/1000, 2)
+	safeHead.Hash = mockHash(b.Timestamp, 2)
 
 	// Advance the origin. At this point the batch with timestamp 18 will be created
 	input.origin = l1[3]
@@ -534,7 +534,7 @@ func BatchQueueMissing(t *testing.T, batchType int) {
 	require.Equal(t, e, io.EOF)
 	b, _, e = bq.NextBatch(context.Background(), safeHead)
 	require.Nil(t, e)
-	require.Equal(t, b.Timestamp, uint64(18000))
+	require.Equal(t, b.Timestamp, uint64(18))
 	require.Empty(t, b.Transactions)
 	require.Equal(t, rollup.Epoch(1), b.EpochNum)
 }
@@ -621,7 +621,7 @@ func BatchQueueAdvancedEpoch(t *testing.T, batchType int) {
 			require.Equal(t, expectedOutput, b)
 			safeHead.Number += 1
 			safeHead.Time += cfg.BlockTime
-			safeHead.Hash = mockHash(b.Timestamp/1000, 2)
+			safeHead.Hash = mockHash(b.Timestamp, 2)
 			safeHead.L1Origin = b.Epoch()
 		}
 	}
@@ -720,7 +720,7 @@ func BatchQueueShuffle(t *testing.T, batchType int) {
 			require.Equal(t, expectedOutput, b)
 			safeHead.Number += 1
 			safeHead.Time += cfg.BlockTime
-			safeHead.Hash = mockHash(b.Timestamp/1000, 2)
+			safeHead.Hash = mockHash(b.Timestamp, 2)
 			safeHead.L1Origin = b.Epoch()
 		}
 	}
@@ -823,7 +823,7 @@ func TestBatchQueueOverlappingSpanBatch(t *testing.T) {
 			require.Equal(t, expectedOutputBatches[i], b)
 			safeHead.Number += 1
 			safeHead.Time += cfg.BlockTime
-			safeHead.Hash = mockHash(b.Timestamp/1000, 2)
+			safeHead.Hash = mockHash(b.Timestamp, 2)
 			safeHead.L1Origin = b.Epoch()
 		}
 	}
@@ -941,7 +941,7 @@ func TestBatchQueueComplex(t *testing.T) {
 			require.Equal(t, expectedOutput, b)
 			safeHead.Number += 1
 			safeHead.Time += cfg.BlockTime
-			safeHead.Hash = mockHash(b.Timestamp/1000, 2)
+			safeHead.Hash = mockHash(b.Timestamp, 2)
 			safeHead.L1Origin = b.Epoch()
 		}
 	}
