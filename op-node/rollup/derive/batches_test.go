@@ -107,6 +107,7 @@ func TestValidBatch(t *testing.T) {
 		ParentHash: l1E.Hash,
 		Time:       l1E.Time + 7,
 	}
+	_ = l1F
 
 	l2A0 := eth.L2BlockRef{
 		Hash:           testutils.RandomHash(rng),
@@ -213,6 +214,7 @@ func TestValidBatch(t *testing.T) {
 		L1Origin:       l1Z.ID(),
 		SequenceNumber: 0,
 	}
+	_ = l2Z0
 
 	l2A4 := eth.L2BlockRef{
 		Hash:           testutils.RandomHash(rng),
@@ -229,6 +231,7 @@ func TestValidBatch(t *testing.T) {
 		ParentHash: l1A.Hash,
 		Time:       l2A4.Time + 1, // too late for l2A4 to adopt yet
 	}
+	_ = l1BLate
 
 	singularBatchTestCases := []ValidBatchTestCase{
 		{
