@@ -348,10 +348,11 @@ func TestSpanBatchDerive(t *testing.T) {
 		spanBatch := initializedSpanBatch(singularBatches, genesisTimeStamp, chainID)
 		// set originChangedBit to match the original test implementation
 		spanBatch.setFirstOriginChangedBit(uint(originChangedBit))
-		rawSpanBatch, err := spanBatch.ToRawSpanBatch()
+		var cfg rollup.Config
+		rawSpanBatch, err := spanBatch.ToRawSpanBatch(&cfg)
 		require.NoError(t, err)
 
-		spanBatchDerived, err := rawSpanBatch.derive(l2BlockTime, genesisTimeStamp, chainID)
+		spanBatchDerived, err := rawSpanBatch.derive(&cfg, genesisTimeStamp, chainID)
 		require.NoError(t, err)
 
 		blockCount := len(singularBatches)
@@ -404,7 +405,8 @@ func TestSpanBatchMerge(t *testing.T) {
 		spanBatch := initializedSpanBatch(singularBatches, genesisTimeStamp, chainID)
 		// set originChangedBit to match the original test implementation
 		spanBatch.setFirstOriginChangedBit(uint(originChangedBit))
-		rawSpanBatch, err := spanBatch.ToRawSpanBatch()
+		var cfg rollup.Config
+		rawSpanBatch, err := spanBatch.ToRawSpanBatch(&cfg)
 		require.NoError(t, err)
 
 		// check span batch prefix
@@ -450,7 +452,8 @@ func TestSpanBatchToSingularBatch(t *testing.T) {
 		spanBatch := initializedSpanBatch(singularBatches, genesisTimeStamp, chainID)
 		// set originChangedBit to match the original test implementation
 		spanBatch.setFirstOriginChangedBit(uint(originChangedBit))
-		rawSpanBatch, err := spanBatch.ToRawSpanBatch()
+		var cfg rollup.Config
+		rawSpanBatch, err := spanBatch.ToRawSpanBatch(&cfg)
 		require.NoError(t, err)
 
 		l1Origins := mockL1Origin(rng, rawSpanBatch, singularBatches)
