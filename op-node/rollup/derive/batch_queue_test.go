@@ -55,7 +55,7 @@ func b(chainId *big.Int, timestamp uint64, epoch eth.L1BlockRef) *SingularBatch 
 	txData, _ := tx.MarshalBinary()
 	return &SingularBatch{
 		ParentHash:   mockHash(timestamp-2, 2),
-		Timestamp:    timestamp,
+		Timestamp:    timestamp * 1000, // after derive, this is millisecond timestamp
 		EpochNum:     rollup.Epoch(epoch.Number),
 		EpochHash:    epoch.Hash,
 		Transactions: []hexutil.Bytes{txData},
