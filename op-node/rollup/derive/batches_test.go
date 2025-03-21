@@ -35,25 +35,25 @@ func deltaAtGenesis(c *rollup.Config) {
 	c.DeltaTime = &zero64
 }
 
-func deltaAt(t *uint64) func(*rollup.Config) {
-	return func(c *rollup.Config) {
-		c.DeltaTime = t
-	}
-}
-
-func fjordAt(t *uint64) func(*rollup.Config) {
-	return func(c *rollup.Config) {
-		c.FjordTime = t
-	}
-}
-
-func multiMod[T any](mods ...func(T)) func(T) {
-	return func(x T) {
-		for _, mod := range mods {
-			mod(x)
-		}
-	}
-}
+//func deltaAt(t *uint64) func(*rollup.Config) {
+//	return func(c *rollup.Config) {
+//		c.DeltaTime = t
+//	}
+//}
+//
+//func fjordAt(t *uint64) func(*rollup.Config) {
+//	return func(c *rollup.Config) {
+//		c.FjordTime = t
+//	}
+//}
+//
+//func multiMod[T any](mods ...func(T)) func(T) {
+//	return func(x T) {
+//		for _, mod := range mods {
+//			mod(x)
+//		}
+//	}
+//}
 
 const defaultBlockTime = 2
 
