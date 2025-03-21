@@ -184,7 +184,7 @@ func TestSequencerChaosMonkey(t *testing.T) {
 			L2Time:       l1Time + 300, // L2 may start with a relative old L1 origin and will have to catch it up
 			SystemConfig: eth.SystemConfig{},
 		},
-		BlockTime:         2000,
+		BlockTime:         2,
 		MaxSequencerDrift: 30,
 	}
 	// keep track of the L1 timestamps we mock because sometimes we only have the L1 hash/num handy
@@ -259,7 +259,7 @@ func TestSequencerChaosMonkey(t *testing.T) {
 
 		testGasLimit := eth.Uint64Quantity(10_000_000)
 		return &eth.PayloadAttributes{
-			Timestamp:             eth.Uint64Quantity(l2Parent.Time + cfg.SecondBlockInterval()),
+			Timestamp:             eth.Uint64Quantity(l2Parent.Time + cfg.BlockTime),
 			PrevRandao:            eth.Bytes32{},
 			SuggestedFeeRecipient: common.Address{},
 			Transactions:          []eth.Data{infoDep},
