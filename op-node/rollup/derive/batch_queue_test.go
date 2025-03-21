@@ -55,7 +55,7 @@ func b(chainId *big.Int, timestamp uint64, epoch eth.L1BlockRef) *SingularBatch 
 	txData, _ := tx.MarshalBinary()
 	return &SingularBatch{
 		ParentHash:   mockHash(timestamp-2, 2),
-		Timestamp:    timestamp * 1000, // after derive, this is millisecond timestamp
+		Timestamp:    timestamp * 1000, // after derive, this is millisecond timestamp, mock ut
 		EpochNum:     rollup.Epoch(epoch.Number),
 		EpochHash:    epoch.Hash,
 		Transactions: []hexutil.Bytes{txData},
@@ -101,10 +101,10 @@ func singularBatchToPayload(t *testing.T, batch *SingularBatch, blockNumber uint
 	txs = append(txs, batch.Transactions...)
 	return eth.ExecutionPayloadEnvelope{
 		ExecutionPayload: &eth.ExecutionPayload{
-			BlockHash:    mockHash(batch.Timestamp, 2),
+			BlockHash:    mockHash(batch.Timestamp/1000, 2),
 			ParentHash:   batch.ParentHash,
 			BlockNumber:  hexutil.Uint64(blockNumber),
-			Timestamp:    hexutil.Uint64(batch.Timestamp),
+			Timestamp:    hexutil.Uint64(batch.Timestamp / 1000),
 			Transactions: txs,
 		},
 	}
@@ -115,7 +115,7 @@ func singularBatchToBlockRef(t *testing.T, batch *SingularBatch, blockNumber uin
 		Hash:       mockHash(batch.Timestamp, 2),
 		Number:     blockNumber,
 		ParentHash: batch.ParentHash,
-		Time:       batch.Timestamp,
+		Time:       batch.Timestamp / 1000, // second timestamp
 		L1Origin:   eth.BlockID{Hash: batch.EpochHash, Number: uint64(batch.EpochNum)},
 	}
 }
