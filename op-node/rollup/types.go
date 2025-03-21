@@ -353,9 +353,9 @@ func (cfg *Config) CheckL2GenesisBlockHash(ctx context.Context, client L2Client)
 
 // Check verifies that the given configuration makes sense
 func (cfg *Config) Check() error {
-	//if cfg.BlockTime == 0 {
-	//	return ErrBlockTimeZero
-	//}
+	if cfg.BlockTime == 0 {
+		return ErrBlockTimeZero
+	}
 	if cfg.ChannelTimeout == 0 {
 		return ErrMissingChannelTimeout
 	}
