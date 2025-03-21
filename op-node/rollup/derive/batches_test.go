@@ -1648,14 +1648,14 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2B0.Hash,
 					EpochNum:     rollup.Epoch(l2B1.L1Origin.Number),
 					EpochHash:    l2B1.L1Origin.Hash,
-					Timestamp:    l2B1.Time,
+					Timestamp:    l2B1.Time * 1000,
 					Transactions: []hexutil.Bytes{randTxData}, // Random generated TX that does not match overlapping block
 				},
 				{
 					ParentHash:   l2B1.Hash,
 					EpochNum:     rollup.Epoch(l2B2.L1Origin.Number),
 					EpochHash:    l2B2.L1Origin.Hash,
-					Timestamp:    l2B2.Time,
+					Timestamp:    l2B2.Time * 1000,
 					Transactions: nil,
 				},
 			}, uint64(0), big.NewInt(0)),
