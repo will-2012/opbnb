@@ -63,7 +63,7 @@ func TestValidBatch(t *testing.T) {
 			Genesis: rollup.Genesis{
 				L2Time: 31, // a genesis time that itself does not align to make it more interesting
 			},
-			BlockTime:         defaultBlockTime * 1000,
+			BlockTime:         defaultBlockTime,
 			SeqWindowSize:     4,
 			MaxSequencerDrift: 6,
 		}

@@ -400,7 +400,7 @@ func BatchQueueInvalidInternalAdvance(t *testing.T, batchType int) {
 	require.Equal(t, rollup.Epoch(1), b.EpochNum)
 	safeHead.Number += 1
 	safeHead.Time += 2
-	safeHead.Hash = mockHash(b.Timestamp, 2)
+	safeHead.Hash = mockHash(b.Timestamp/1000, 2)
 	safeHead.L1Origin = b.Epoch()
 	b, _, e = bq.NextBatch(context.Background(), safeHead)
 	require.ErrorIs(t, e, io.EOF)
@@ -999,7 +999,7 @@ func TestBatchQueueResetSpan(t *testing.T) {
 	// This NextBatch() will return the second singular batch.
 	safeHead.Number += 1
 	safeHead.Time += cfg.BlockTime
-	safeHead.Hash = mockHash(nextBatch.Timestamp, 2)
+	safeHead.Hash = mockHash(nextBatch.Timestamp/1000, 2)
 	safeHead.L1Origin = nextBatch.Epoch()
 	nextBatch, _, err = bq.NextBatch(context.Background(), safeHead)
 	require.NoError(t, err)
