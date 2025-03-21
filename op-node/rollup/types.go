@@ -283,7 +283,7 @@ func (cfg *Config) TargetBlockNumber(milliTimestamp uint64) (num uint64, err err
 		}
 		wallClockGenesisDiff := milliTimestamp - genesisMilliTimestamp
 		// Note: round down, we should not request blocks into the future.
-		blocksSinceGenesis := wallClockGenesisDiff / cfg.BlockTime
+		blocksSinceGenesis := wallClockGenesisDiff / (cfg.BlockTime * 1000)
 		return cfg.Genesis.L2.Number + blocksSinceGenesis, nil
 	} else {
 		voltaMilliTimestamp := *cfg.VoltaTime * 1000
