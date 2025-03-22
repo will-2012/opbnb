@@ -395,6 +395,7 @@ func (b *RawSpanBatch) derive(rollupCfg *rollup.Config, genesisTimestamp uint64,
 			txIdx++
 		}
 		spanBatch.Batches = append(spanBatch.Batches, &batch)
+		fmt.Printf("AAA, ts=%d, i=%d\n", batch.Timestamp, i)
 	}
 	if millisecondTimestamp {
 		log.Debug("succeed to build span batch with milliseconds timestamp", "rel timestamp", b.relTimestamp,
@@ -592,6 +593,7 @@ func (b *SpanBatch) ToRawSpanBatch(cfg *rollup.Config) (*RawSpanBatch, error) {
 		"genesis_timestamp", b.GenesisTimestamp,
 		"is_volta", cfg.IsVolta(span_start.Timestamp))
 
+	fmt.Println("AAA")
 	return &RawSpanBatch{
 		spanBatchPrefix: spanBatchPrefix{
 			relTimestamp:  relTs,
