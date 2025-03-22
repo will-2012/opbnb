@@ -3,9 +3,11 @@ package derive
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -39,7 +41,9 @@ func deltaAtGenesis(c *rollup.Config, t *ValidBatchTestCase) {
 func setDeltaAndL2Time(c *rollup.Config, t *ValidBatchTestCase) {
 	c.DeltaTime = &zero64
 	_ = t
-	c.Genesis.L2Time = t.L2SafeHead.Number - t.L2SafeHead.Time
+	c.Genesis.L2Time = t.L2SafeHead.Time - t.L2SafeHead.Number*defaultBlockTime
+	fmt.Printf("safe_number=%d, safe_time=%d, batch_start=%d, genesis=%d\n",
+		t.L2SafeHead.Number, t.L2SafeHead.Time, t.Batch.GetTimestamp(), c.Genesis.L2Time)
 }
 
 //func deltaAt(t *uint64) func(*rollup.Config) {
@@ -84,6 +88,7 @@ func TestValidBatch(t *testing.T) {
 	randTxData, _ := randTx.MarshalBinary()
 
 	l1A := testutils.RandomBlockRef(rng)
+	l1A.Time = l1A.Time / 1000 // Avoid mock time too bigger
 	l1B := eth.L1BlockRef{
 		Hash:       testutils.RandomHash(rng),
 		Number:     l1A.Number + 1,
@@ -1665,12 +1670,16 @@ func TestValidBatch(t *testing.T) {
 					Timestamp:    l2B2.Time * 1000,
 					Transactions: nil,
 				},
-			}, uint64(0), big.NewInt(0)),
+			}, uint64(0) /* gensis ?? */, big.NewInt(0)),
 		},
 		Expected:    BatchDrop,
 		ExpectedLog: "overlapped block's transaction does not match",
-		ConfigMod:   deltaAtGenesis,
+		ConfigMod:   setDeltaAndL2Time,
 	}
+
+	fmt.Printf("AAAAA %d, %d\n", l2B1.Time, l2B2.Time)
+
+	time.Sleep(10 * time.Millisecond)
 
 	t.Run(differentTxtestCase.Name, func(t *testing.T) {
 		runTestCase(t, differentTxtestCase)
