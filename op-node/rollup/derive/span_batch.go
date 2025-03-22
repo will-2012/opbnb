@@ -424,6 +424,7 @@ type SpanBatchElement struct {
 
 // singularBatchToElement converts a SingularBatch to a SpanBatchElement
 func singularBatchToElement(singularBatch *SingularBatch) *SpanBatchElement {
+	log.Warn("singular batch to element", "batch", singularBatch)
 	return &SpanBatchElement{
 		EpochNum:     singularBatch.EpochNum,
 		Timestamp:    singularBatch.Timestamp, // ms

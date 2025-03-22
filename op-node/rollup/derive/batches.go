@@ -3,6 +3,8 @@ package derive
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -197,11 +199,15 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 	nextMilliTimestamp := cfg.NextMillisecondBlockTime(l2SafeHead.MillisecondTimestamp())
 
 	if batch.GetTimestamp() > nextMilliTimestamp {
-		log.Trace("received out-of-order batch for future processing after next batch", "next_ms_timestamp", nextMilliTimestamp)
+		log.Trace("received out-of-order batch for future processing after next batch",
+			"first_ms_timestamp_of_spanbatch", batch.GetTimestamp(),
+			"next_ms_timestamp", nextMilliTimestamp)
 		return BatchFuture
 	}
 	if batch.GetBlockTimestamp(batch.GetBlockCount()-1) < nextMilliTimestamp {
-		log.Warn("span batch has no new blocks after safe head")
+		log.Warn("span batch has no new blocks after safe head",
+			"last_ms_timestamp_of_spanbatch", batch.GetBlockTimestamp(batch.GetBlockCount()-1),
+			"next_ms_timestamp", nextMilliTimestamp)
 		return BatchDrop
 	}
 
@@ -226,6 +232,9 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 			// unable to validate the batch for now. retry later.
 			return BatchUndecided
 		}
+		log.Warn("target block number", "batch_timestamp", batch.GetTimestamp(), "current_num", currentNum)
+		fmt.Printf("batch_timestamp=%d, current_num=%d\n", batch.GetTimestamp(), currentNum)
+		time.Sleep(10 * time.Millisecond)
 		parentNum = currentNum - 1
 		parentBlock, err = l2Fetcher.L2BlockRefByNumber(ctx, parentNum)
 		if err != nil {
