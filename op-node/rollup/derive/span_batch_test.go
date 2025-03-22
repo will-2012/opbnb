@@ -407,11 +407,12 @@ func TestSpanBatchMerge(t *testing.T) {
 		// set originChangedBit to match the original test implementation
 		spanBatch.setFirstOriginChangedBit(uint(originChangedBit))
 		var cfg rollup.Config
+		cfg.BlockTime = 2
 		rawSpanBatch, err := spanBatch.ToRawSpanBatch(&cfg)
 		require.NoError(t, err)
 
 		// check span batch prefix
-		require.Equal(t, rawSpanBatch.relTimestamp, singularBatches[0].Timestamp-genesisTimeStamp*1000, "invalid relative timestamp")
+		require.Equal(t, rawSpanBatch.relTimestamp, singularBatches[0].Timestamp-genesisTimeStamp, "invalid relative timestamp")
 		require.Equal(t, rollup.Epoch(rawSpanBatch.l1OriginNum), singularBatches[blockCount-1].EpochNum)
 		require.Equal(t, rawSpanBatch.parentCheck[:], singularBatches[0].ParentHash.Bytes()[:20], "invalid parent check")
 		require.Equal(t, rawSpanBatch.l1OriginCheck[:], singularBatches[blockCount-1].EpochHash.Bytes()[:20], "invalid l1 origin check")
