@@ -1660,7 +1660,7 @@ func TestValidBatch(t *testing.T) {
 					Timestamp:    l2B2.Time * 1000,
 					Transactions: nil,
 				},
-			}, uint64(0) /* gensis ?? */, big.NewInt(0)),
+			}, uint64(0), big.NewInt(0)),
 		},
 		Expected:    BatchDrop,
 		ExpectedLog: "overlapped block's transaction does not match",

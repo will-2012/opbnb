@@ -725,6 +725,7 @@ func (c *Config) LogDescription(log log.Logger, l2Chains map[string]string) {
 		"interop_time", fmtForkTimeOrUnset(c.InteropTime),
 		"fermat", c.Fermat,
 		"snow_time", fmtForkTimeOrUnset(c.SnowTime),
+		"volta_time", fmtForkTimeOrUnset(c.VoltaTime),
 		"plasma_mode", c.PlasmaConfig != nil,
 	)
 }
