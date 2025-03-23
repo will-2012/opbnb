@@ -48,6 +48,7 @@ func mockHash(time uint64, layer uint8) common.Hash {
 	return hash
 }
 
+// mock batch after derive
 func b(chainId *big.Int, timestamp uint64, epoch eth.L1BlockRef) *SingularBatch {
 	rng := rand.New(rand.NewSource(int64(timestamp)))
 	signer := types.NewLondonSigner(chainId)
@@ -845,7 +846,7 @@ func TestBatchQueueComplex(t *testing.T) {
 	}
 	cfg := &rollup.Config{
 		Genesis: rollup.Genesis{
-			L2Time: 10,
+			L2Time: 4,
 		},
 		BlockTime:         2,
 		MaxSequencerDrift: 600,
