@@ -35,11 +35,6 @@ var (
 	ErrL2ChainIDNotPositive          = errors.New("L2 chain ID must be non-zero and positive")
 )
 
-//var (
-//	VoltBlockTime       uint64 = 500
-//	BeforeVoltBlockTime uint64 = 1000
-//)
-
 // NetworkNames are user friendly names to use in the chain spec banner.
 var NetworkNames = map[string]string{
 	"56":   "bscMainnet",
@@ -181,7 +176,6 @@ func (cfg *Config) SecondBlockInterval(millisecondTimestamp uint64) uint64 {
 	return cfg.MillisecondBlockInterval(millisecondTimestamp) / 1000
 }
 
-// TODO:
 func (cfg *Config) NextMillisecondBlockTime(millisecondTimestamp uint64) uint64 {
 	return millisecondTimestamp + cfg.MillisecondBlockInterval(millisecondTimestamp)
 }
@@ -210,24 +204,6 @@ func (c *Config) IsVoltaActivationBlock(l2BlockMillisecondTime uint64) bool {
 		l2BlockTime >= c.BlockTime &&
 		!c.IsVolta(l2BlockTime-c.BlockTime)
 }
-
-// MillisecondBlockInterval returns millisecond block interval, which has compatible conversions.
-// Mainly used to support milli block interval.
-//func (cfg *Config) MillisecondBlockInterval(millisecondTimestamp uint64) uint64 {
-//	if cfg.BlockTime > 3 {
-//		return cfg.BlockTime
-//	}
-//	return cfg.BlockTime * 1000
-//}
-
-// SecondBlockInterval returns second block interval, which has compatible conversions.
-// Mainly used to compatible to history fork time.
-//func (cfg *Config) SecondBlockInterval() uint64 {
-//	if cfg.BlockTime <= 3 {
-//		return cfg.BlockTime
-//	}
-//	return cfg.BlockTime / 1000
-//}
 
 // ValidateL1Config checks L1 config variables for errors.
 func (cfg *Config) ValidateL1Config(ctx context.Context, client L1Client) error {

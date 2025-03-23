@@ -229,7 +229,6 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 			// unable to validate the batch for now. retry later.
 			return BatchUndecided
 		}
-		log.Warn("target block number", "batch_timestamp", batch.GetTimestamp(), "current_num", currentNum)
 		parentNum = currentNum - 1
 		parentBlock, err = l2Fetcher.L2BlockRefByNumber(ctx, parentNum)
 		if err != nil {

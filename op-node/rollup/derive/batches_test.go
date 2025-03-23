@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -1675,10 +1674,6 @@ func TestValidBatch(t *testing.T) {
 		ExpectedLog: "overlapped block's transaction does not match",
 		ConfigMod:   setDeltaAndL2Time,
 	}
-
-	fmt.Printf("AAAAA %d, %d\n", l2B1.Time, l2B2.Time)
-
-	time.Sleep(10 * time.Millisecond)
 
 	t.Run(differentTxtestCase.Name, func(t *testing.T) {
 		runTestCase(t, differentTxtestCase)
