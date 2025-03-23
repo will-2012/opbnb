@@ -3,8 +3,6 @@ package derive
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -225,7 +223,6 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 			log.Warn("batch has misaligned timestamp, not overlapped exactly")
 			return BatchDrop
 		}
-		// TODO:
 		currentNum, err := cfg.TargetBlockNumber(batch.GetTimestamp())
 		if err != nil {
 			log.Warn("failed to computer batch number", "batch_ms_time", batch.GetTimestamp(), "err", err)
@@ -233,8 +230,6 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 			return BatchUndecided
 		}
 		log.Warn("target block number", "batch_timestamp", batch.GetTimestamp(), "current_num", currentNum)
-		fmt.Printf("batch_timestamp=%d, current_num=%d\n", batch.GetTimestamp(), currentNum)
-		time.Sleep(10 * time.Millisecond)
 		parentNum = currentNum - 1
 		parentBlock, err = l2Fetcher.L2BlockRefByNumber(ctx, parentNum)
 		if err != nil {
