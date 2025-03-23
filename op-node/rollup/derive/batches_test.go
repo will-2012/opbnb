@@ -1433,34 +1433,33 @@ func TestValidBatch(t *testing.T) {
 			ExpectedLog: "batch has misaligned timestamp, block time is too short",
 			ConfigMod:   deltaAtGenesis,
 		},
-		// TODO: fix
-		//{
-		//	Name:       "misaligned batch",
-		//	L1Blocks:   []eth.L1BlockRef{l1A, l1B},
-		//	L2SafeHead: l2A0,
-		//	Batch: BatchWithL1InclusionBlock{
-		//		L1InclusionBlock: l1B,
-		//		Batch: initializedSpanBatch([]*SingularBatch{
-		//			{
-		//				ParentHash:   l2A0.Hash,
-		//				EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
-		//				EpochHash:    l2A1.L1Origin.Hash,
-		//				Timestamp:    (l2A0.Time - 1) * 1000,
-		//				Transactions: nil,
-		//			},
-		//			{
-		//				ParentHash:   l2A1.Hash,
-		//				EpochNum:     rollup.Epoch(l2A2.L1Origin.Number),
-		//				EpochHash:    l2A2.L1Origin.Hash,
-		//				Timestamp:    l2A1.MillisecondTimestamp(),
-		//				Transactions: nil,
-		//			},
-		//		}, uint64(0), big.NewInt(0)),
-		//	},
-		//	Expected:    BatchDrop,
-		//	ExpectedLog: "batch has misaligned timestamp, not overlapped exactly",
-		//	ConfigMod:   setDeltaAndL2Time,
-		//},
+		{
+			Name:       "misaligned batch",
+			L1Blocks:   []eth.L1BlockRef{l1A, l1B},
+			L2SafeHead: l2A0,
+			Batch: BatchWithL1InclusionBlock{
+				L1InclusionBlock: l1B,
+				Batch: initializedSpanBatch([]*SingularBatch{
+					{
+						ParentHash:   l2A0.Hash,
+						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
+						EpochHash:    l2A1.L1Origin.Hash,
+						Timestamp:    l2A0.MillisecondTimestamp() - 20,
+						Transactions: nil,
+					},
+					{
+						ParentHash:   l2A1.Hash,
+						EpochNum:     rollup.Epoch(l2A2.L1Origin.Number),
+						EpochHash:    l2A2.L1Origin.Hash,
+						Timestamp:    l2A1.MillisecondTimestamp(),
+						Transactions: nil,
+					},
+				}, uint64(0), big.NewInt(0)),
+			},
+			Expected:    BatchDrop,
+			ExpectedLog: "batch has misaligned timestamp, not overlapped exactly",
+			ConfigMod:   setDeltaAndL2Time,
+		},
 		{
 			Name:       "failed to fetch overlapping block payload",
 			L1Blocks:   []eth.L1BlockRef{l1A, l1B},
