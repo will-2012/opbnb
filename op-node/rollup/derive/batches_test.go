@@ -3,7 +3,6 @@ package derive
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -39,10 +38,7 @@ func deltaAtGenesis(c *rollup.Config, t *ValidBatchTestCase) {
 
 func setDeltaAndL2Time(c *rollup.Config, t *ValidBatchTestCase) {
 	c.DeltaTime = &zero64
-	_ = t
 	c.Genesis.L2Time = t.L2SafeHead.Time - t.L2SafeHead.Number*defaultBlockTime
-	fmt.Printf("safe_number=%d, safe_time=%d, batch_start=%d, genesis=%d\n",
-		t.L2SafeHead.Number, t.L2SafeHead.Time, t.Batch.GetTimestamp(), c.Genesis.L2Time)
 }
 
 func deltaAt(t *uint64) func(*rollup.Config, *ValidBatchTestCase) {
@@ -117,7 +113,6 @@ func TestValidBatch(t *testing.T) {
 		ParentHash: l1E.Hash,
 		Time:       l1E.Time + 7,
 	}
-	_ = l1F
 
 	l2A0 := eth.L2BlockRef{
 		Hash:           testutils.RandomHash(rng),
@@ -224,7 +219,6 @@ func TestValidBatch(t *testing.T) {
 		L1Origin:       l1Z.ID(),
 		SequenceNumber: 0,
 	}
-	_ = l2Z0
 
 	l2A4 := eth.L2BlockRef{
 		Hash:           testutils.RandomHash(rng),
@@ -241,7 +235,6 @@ func TestValidBatch(t *testing.T) {
 		ParentHash: l1A.Hash,
 		Time:       l2A4.Time + 1, // too late for l2A4 to adopt yet
 	}
-	_ = l1BLate
 
 	singularBatchTestCases := []ValidBatchTestCase{
 		{
@@ -1595,7 +1588,6 @@ func TestValidBatch(t *testing.T) {
 		if mod := testCase.ConfigMod; mod != nil {
 			mod(rcfg, &testCase)
 		}
-		// TODO
 		validity := CheckBatch(ctx, rcfg, logger, testCase.L1Blocks, testCase.L2SafeHead, &testCase.Batch, &l2Client)
 		require.Equal(t, testCase.Expected, validity, "batch check must return expected validity level")
 		if expLog := testCase.ExpectedLog; expLog != "" {
@@ -1692,7 +1684,6 @@ func TestValidBatch(t *testing.T) {
 	}
 	l2Client.Mock.On("PayloadByNumber", l2B1.Number).Return(&payload, &nilErr).Once()
 
-	// TODO: TargetBlockNumber
 	invalidTxTestCase := ValidBatchTestCase{
 		Name:       "invalid_tx_overlapping_batch",
 		L1Blocks:   []eth.L1BlockRef{l1B},

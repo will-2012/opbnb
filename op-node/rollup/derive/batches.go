@@ -300,7 +300,7 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 		}
 		blockTimestamp := batch.GetBlockTimestamp(i)
 		if blockTimestamp < l1Origin.MillisecondTimestamp() {
-			log.Warn("block timestamp is less than L1 origin timestamp", "l2_timestamp", blockTimestamp, "l1_timestamp", l1Origin.Time, "origin", l1Origin.ID())
+			log.Warn("block timestamp is less than L1 origin timestamp", "l2_timestamp", blockTimestamp, "l1_timestamp", l1Origin.MillisecondTimestamp(), "origin", l1Origin.ID())
 			return BatchDrop
 		}
 
