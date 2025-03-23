@@ -3,9 +3,11 @@ package derive
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -24,33 +26,41 @@ type ValidBatchTestCase struct {
 	L2SafeHead     eth.L2BlockRef
 	Batch          BatchWithL1InclusionBlock
 	Expected       BatchValidity
-	ExpectedLog    string               // log message that must be included
-	NotExpectedLog string               // log message that must not be included
-	ConfigMod      func(*rollup.Config) // optional rollup config mod
+	ExpectedLog    string                                    // log message that must be included
+	NotExpectedLog string                                    // log message that must not be included
+	ConfigMod      func(*rollup.Config, *ValidBatchTestCase) // optional rollup config mod
 }
 
 var zero64 = uint64(0)
 
-func deltaAtGenesis(c *rollup.Config) {
+func deltaAtGenesis(c *rollup.Config, t *ValidBatchTestCase) {
 	c.DeltaTime = &zero64
+	_ = t
 }
 
-func deltaAt(t *uint64) func(*rollup.Config) {
-	return func(c *rollup.Config) {
+func setDeltaAndL2Time(c *rollup.Config, t *ValidBatchTestCase) {
+	c.DeltaTime = &zero64
+	_ = t
+	c.Genesis.L2Time = t.L2SafeHead.Time - t.L2SafeHead.Number*defaultBlockTime
+	fmt.Printf("safe_number=%d, safe_time=%d, batch_start=%d, genesis=%d\n",
+		t.L2SafeHead.Number, t.L2SafeHead.Time, t.Batch.GetTimestamp(), c.Genesis.L2Time)
+}
+
+func deltaAt(t *uint64) func(*rollup.Config, *ValidBatchTestCase) {
+	return func(c *rollup.Config, v *ValidBatchTestCase) {
 		c.DeltaTime = t
 	}
 }
-
-func fjordAt(t *uint64) func(*rollup.Config) {
-	return func(c *rollup.Config) {
+func fjordAt(t *uint64) func(*rollup.Config, *ValidBatchTestCase) {
+	return func(c *rollup.Config, v *ValidBatchTestCase) {
 		c.FjordTime = t
 	}
 }
 
-func multiMod[T any](mods ...func(T)) func(T) {
-	return func(x T) {
+func multiMod[T any, T1 any](mods ...func(T, T1)) func(T, T1) {
+	return func(x T, y T1) {
 		for _, mod := range mods {
-			mod(x)
+			mod(x, y)
 		}
 	}
 }
@@ -77,6 +87,7 @@ func TestValidBatch(t *testing.T) {
 	randTxData, _ := randTx.MarshalBinary()
 
 	l1A := testutils.RandomBlockRef(rng)
+	l1A.Time = l1A.Time / 1000 // Avoid mock time too bigger
 	l1B := eth.L1BlockRef{
 		Hash:       testutils.RandomHash(rng),
 		Number:     l1A.Number + 1,
@@ -107,6 +118,7 @@ func TestValidBatch(t *testing.T) {
 		ParentHash: l1E.Hash,
 		Time:       l1E.Time + 7,
 	}
+	_ = l1F
 
 	l2A0 := eth.L2BlockRef{
 		Hash:           testutils.RandomHash(rng),
@@ -213,6 +225,7 @@ func TestValidBatch(t *testing.T) {
 		L1Origin:       l1Z.ID(),
 		SequenceNumber: 0,
 	}
+	_ = l2Z0
 
 	l2A4 := eth.L2BlockRef{
 		Hash:           testutils.RandomHash(rng),
@@ -229,6 +242,7 @@ func TestValidBatch(t *testing.T) {
 		ParentHash: l1A.Hash,
 		Time:       l2A4.Time + 1, // too late for l2A4 to adopt yet
 	}
+	_ = l1BLate
 
 	singularBatchTestCases := []ValidBatchTestCase{
 		{
@@ -241,7 +255,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A1.ParentHash,
 					EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 					EpochHash:    l2A1.L1Origin.Hash,
-					Timestamp:    l2A1.Time,
+					Timestamp:    l2A1.MillisecondTimestamp(),
 					Transactions: nil,
 				},
 			},
@@ -257,7 +271,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A1.ParentHash,
 					EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 					EpochHash:    l2A1.L1Origin.Hash,
-					Timestamp:    l2A1.Time + 1, // 1 too high
+					Timestamp:    (l2A1.Time + 1) * 1000, // 1 too high
 					Transactions: nil,
 				},
 			},
@@ -273,7 +287,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A1.ParentHash,
 					EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 					EpochHash:    l2A1.L1Origin.Hash,
-					Timestamp:    l2A0.Time, // repeating the same time
+					Timestamp:    l2A0.MillisecondTimestamp(), // repeating the same time
 					Transactions: nil,
 				},
 			},
@@ -289,7 +303,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A1.ParentHash,
 					EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 					EpochHash:    l2A1.L1Origin.Hash,
-					Timestamp:    l2A1.Time - 1, // block time is 2, so this is 1 too low
+					Timestamp:    (l2A1.Time - 1) * 1000, // block time is 2, so this is 1 too low
 					Transactions: nil,
 				},
 			},
@@ -305,7 +319,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   testutils.RandomHash(rng),
 					EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 					EpochHash:    l2A1.L1Origin.Hash,
-					Timestamp:    l2A1.Time,
+					Timestamp:    l2A1.MillisecondTimestamp(),
 					Transactions: nil,
 				},
 			},
@@ -321,7 +335,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A1.ParentHash,
 					EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 					EpochHash:    l2A1.L1Origin.Hash,
-					Timestamp:    l2A1.Time,
+					Timestamp:    l2A1.MillisecondTimestamp(),
 					Transactions: nil,
 				},
 			},
@@ -337,7 +351,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2B0.Hash,                          // build on top of safe head to continue
 					EpochNum:     rollup.Epoch(l2A3.L1Origin.Number), // epoch A is no longer valid
 					EpochHash:    l2A3.L1Origin.Hash,
-					Timestamp:    l2B0.Time + defaultBlockTime, // pass the timestamp check to get too epoch check
+					Timestamp:    (l2B0.Time + defaultBlockTime) * 1000, // pass the timestamp check to get too epoch check
 					Transactions: nil,
 				},
 			},
@@ -353,7 +367,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2B0.ParentHash,
 					EpochNum:     rollup.Epoch(l2B0.L1Origin.Number),
 					EpochHash:    l2B0.L1Origin.Hash,
-					Timestamp:    l2B0.Time,
+					Timestamp:    l2B0.MillisecondTimestamp(),
 					Transactions: nil,
 				},
 			},
@@ -369,7 +383,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2B0.ParentHash,
 					EpochNum:     rollup.Epoch(l1C.Number), // invalid, we need to adopt epoch B before C
 					EpochHash:    l1C.Hash,
-					Timestamp:    l2B0.Time,
+					Timestamp:    l2B0.MillisecondTimestamp(),
 					Transactions: nil,
 				},
 			},
@@ -385,7 +399,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2B0.ParentHash,
 					EpochNum:     rollup.Epoch(l2B0.L1Origin.Number),
 					EpochHash:    l1A.Hash, // invalid, epoch hash should be l1B
-					Timestamp:    l2B0.Time,
+					Timestamp:    l2B0.MillisecondTimestamp(),
 					Transactions: nil,
 				},
 			},
@@ -401,7 +415,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A4.ParentHash,
 					EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 					EpochHash:    l2A4.L1Origin.Hash,
-					Timestamp:    l2A4.Time,
+					Timestamp:    l2A4.MillisecondTimestamp(),
 					Transactions: []hexutil.Bytes{[]byte("sequencer should not include this tx")},
 				},
 			},
@@ -417,7 +431,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A4.ParentHash,
 					EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 					EpochHash:    l2A4.L1Origin.Hash,
-					Timestamp:    l2A4.Time,
+					Timestamp:    l2A4.MillisecondTimestamp(),
 					Transactions: []hexutil.Bytes{[]byte("sequencer should include this tx")},
 				},
 			},
@@ -434,7 +448,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2Y0.ParentHash,
 					EpochNum:     rollup.Epoch(l2Y0.L1Origin.Number),
 					EpochHash:    l2Y0.L1Origin.Hash,
-					Timestamp:    l2Y0.Time, // valid, but more than 6 ahead of l1Y.Time
+					Timestamp:    l2Y0.MillisecondTimestamp(), // valid, but more than 6 ahead of l1Y.Time
 					Transactions: []hexutil.Bytes{[]byte("sequencer should not include this tx")},
 				},
 			},
@@ -450,7 +464,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A4.ParentHash,
 					EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 					EpochHash:    l2A4.L1Origin.Hash,
-					Timestamp:    l2A4.Time,
+					Timestamp:    l2A4.MillisecondTimestamp(),
 					Transactions: nil,
 				},
 			},
@@ -466,7 +480,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2Y0.ParentHash,
 					EpochNum:     rollup.Epoch(l2Y0.L1Origin.Number),
 					EpochHash:    l2Y0.L1Origin.Hash,
-					Timestamp:    l2Y0.Time, // valid, but more than 6 ahead of l1Y.Time
+					Timestamp:    l2Y0.MillisecondTimestamp(), // valid, but more than 6 ahead of l1Y.Time
 					Transactions: nil,
 				},
 			},
@@ -482,7 +496,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A4.ParentHash,
 					EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 					EpochHash:    l2A4.L1Origin.Hash,
-					Timestamp:    l2A4.Time,
+					Timestamp:    l2A4.MillisecondTimestamp(),
 					Transactions: nil,
 				},
 			},
@@ -498,7 +512,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A4.ParentHash,
 					EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 					EpochHash:    l2A4.L1Origin.Hash,
-					Timestamp:    l2A4.Time,
+					Timestamp:    l2A4.MillisecondTimestamp(),
 					Transactions: nil,
 				},
 			},
@@ -514,7 +528,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash: l2A1.ParentHash,
 					EpochNum:   rollup.Epoch(l2A1.L1Origin.Number),
 					EpochHash:  l2A1.L1Origin.Hash,
-					Timestamp:  l2A1.Time,
+					Timestamp:  l2A1.MillisecondTimestamp(),
 					Transactions: []hexutil.Bytes{
 						[]byte{}, // empty tx data
 					},
@@ -532,7 +546,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash: l2A1.ParentHash,
 					EpochNum:   rollup.Epoch(l2A1.L1Origin.Number),
 					EpochHash:  l2A1.L1Origin.Hash,
-					Timestamp:  l2A1.Time,
+					Timestamp:  l2A1.MillisecondTimestamp(),
 					Transactions: []hexutil.Bytes{
 						[]byte{types.DepositTxType, 0}, // piece of data alike to a deposit
 					},
@@ -550,7 +564,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash: l2A1.ParentHash,
 					EpochNum:   rollup.Epoch(l2A1.L1Origin.Number),
 					EpochHash:  l2A1.L1Origin.Hash,
-					Timestamp:  l2A1.Time,
+					Timestamp:  l2A1.MillisecondTimestamp(),
 					Transactions: []hexutil.Bytes{
 						[]byte{0x02, 0x42, 0x13, 0x37},
 						[]byte{0x02, 0xde, 0xad, 0xbe, 0xef},
@@ -569,7 +583,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash: l2B0.ParentHash,
 					EpochNum:   rollup.Epoch(l2B0.L1Origin.Number),
 					EpochHash:  l2B0.L1Origin.Hash,
-					Timestamp:  l2B0.Time,
+					Timestamp:  l2B0.MillisecondTimestamp(),
 					Transactions: []hexutil.Bytes{
 						[]byte{0x02, 0x42, 0x13, 0x37},
 						[]byte{0x02, 0xde, 0xad, 0xbe, 0xef},
@@ -588,7 +602,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A2.Hash,
 					EpochNum:     rollup.Epoch(l2B0.L1Origin.Number),
 					EpochHash:    l2B0.L1Origin.Hash,
-					Timestamp:    l2A2.Time + defaultBlockTime,
+					Timestamp:    l2A2.MillisecondTimestamp() + defaultBlockTime*1000,
 					Transactions: nil,
 				},
 			},
@@ -607,7 +621,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A1.ParentHash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A1.Time,
+						Timestamp:    l2A1.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -627,7 +641,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A1.ParentHash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A1.Time + 1, // 1 too high
+						Timestamp:    (l2A1.Time + 1) * 1000, // 1 too high
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -647,7 +661,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A1.ParentHash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A1.Time - 1, // block time is 2, so this is 1 too low
+						Timestamp:    (l2A1.Time - 1) * 1000, // block time is 2, so this is 1 too low
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -667,7 +681,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   testutils.RandomHash(rng),
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A1.Time,
+						Timestamp:    l2A1.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -687,7 +701,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A1.ParentHash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A1.Time,
+						Timestamp:    l2A1.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -707,13 +721,13 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2B0.Hash,                          // build on top of safe head to continue
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number), // epoch A is no longer valid
 						EpochHash:    l2A3.L1Origin.Hash,
-						Timestamp:    l2B0.Time + defaultBlockTime, // pass the timestamp check to get too epoch check
+						Timestamp:    (l2B0.Time + defaultBlockTime) * 1000, // pass the timestamp check to get too epoch check
 						Transactions: nil,
 					},
 					{
 						EpochNum:     rollup.Epoch(l1B.Number),
 						EpochHash:    l1B.Hash, // pass the l1 origin check
-						Timestamp:    l2B0.Time + defaultBlockTime*2,
+						Timestamp:    (l2B0.Time + defaultBlockTime*2) * 1000,
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -733,7 +747,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2B0.ParentHash,
 						EpochNum:     rollup.Epoch(l2B0.L1Origin.Number),
 						EpochHash:    l2B0.L1Origin.Hash,
-						Timestamp:    l2B0.Time,
+						Timestamp:    l2B0.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -753,14 +767,14 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A3.ParentHash,
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number),
 						EpochHash:    l2A3.L1Origin.Hash,
-						Timestamp:    l2A3.Time,
+						Timestamp:    l2A3.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2B0.ParentHash,
 						EpochNum:     rollup.Epoch(l2B0.L1Origin.Number),
 						EpochHash:    l2B0.L1Origin.Hash,
-						Timestamp:    l2B0.Time,
+						Timestamp:    l2B0.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -780,7 +794,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2B0.ParentHash,
 						EpochNum:     rollup.Epoch(l1C.Number), // invalid, we need to adopt epoch B before C
 						EpochHash:    l1C.Hash,
-						Timestamp:    l2B0.Time,
+						Timestamp:    l2B0.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -800,7 +814,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2B0.ParentHash,
 						EpochNum:     rollup.Epoch(l2B0.L1Origin.Number),
 						EpochHash:    l1A.Hash, // invalid, epoch hash should be l1B
-						Timestamp:    l2B0.Time,
+						Timestamp:    l2B0.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -820,14 +834,14 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A3.ParentHash,
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number),
 						EpochHash:    l1A.Hash,
-						Timestamp:    l2A3.Time,
+						Timestamp:    l2A3.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2B0.ParentHash,
 						EpochNum:     rollup.Epoch(l2B0.L1Origin.Number),
 						EpochHash:    l1A.Hash, // invalid, epoch hash should be l1B
-						Timestamp:    l2B0.Time,
+						Timestamp:    l2B0.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -847,7 +861,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A4.ParentHash,
 						EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 						EpochHash:    l2A4.L1Origin.Hash,
-						Timestamp:    l2A4.Time,
+						Timestamp:    l2A4.MillisecondTimestamp(),
 						Transactions: []hexutil.Bytes{randTxData},
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -867,7 +881,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A4.ParentHash,
 						EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 						EpochHash:    l2A4.L1Origin.Hash,
-						Timestamp:    l2A4.Time,
+						Timestamp:    l2A4.MillisecondTimestamp(),
 						Transactions: []hexutil.Bytes{randTxData},
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -886,14 +900,14 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A3.ParentHash,
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number),
 						EpochHash:    l2A3.L1Origin.Hash,
-						Timestamp:    l2A3.Time,
+						Timestamp:    l2A3.MillisecondTimestamp(),
 						Transactions: []hexutil.Bytes{randTxData},
 					},
 					{ // we build l2A4, which has a timestamp of 2*4 = 8 higher than l2A0
 						ParentHash:   l2A4.ParentHash,
 						EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 						EpochHash:    l2A4.L1Origin.Hash,
-						Timestamp:    l2A4.Time,
+						Timestamp:    l2A4.MillisecondTimestamp(),
 						Transactions: []hexutil.Bytes{randTxData},
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -913,7 +927,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2Y0.ParentHash,
 						EpochNum:     rollup.Epoch(l2Y0.L1Origin.Number),
 						EpochHash:    l2Y0.L1Origin.Hash,
-						Timestamp:    l2Y0.Time, // valid, but more than 6 ahead of l1Y.Time
+						Timestamp:    l2Y0.MillisecondTimestamp(), // valid, but more than 6 ahead of l1Y.Time
 						Transactions: []hexutil.Bytes{randTxData},
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -933,7 +947,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A4.ParentHash,
 						EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 						EpochHash:    l2A4.L1Origin.Hash,
-						Timestamp:    l2A4.Time,
+						Timestamp:    l2A4.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -952,14 +966,14 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2Y0.ParentHash,
 						EpochNum:     rollup.Epoch(l2Y0.L1Origin.Number),
 						EpochHash:    l2Y0.L1Origin.Hash,
-						Timestamp:    l2Y0.Time, // valid, but more than 6 ahead of l1Y.Time
+						Timestamp:    l2Y0.MillisecondTimestamp(), // valid, but more than 6 ahead of l1Y.Time
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2Z0.ParentHash,
 						EpochNum:     rollup.Epoch(l2Z0.L1Origin.Number),
 						EpochHash:    l2Z0.L1Origin.Hash,
-						Timestamp:    l2Z0.Time, // valid, but more than 6 ahead of l1Y.Time
+						Timestamp:    l2Z0.MillisecondTimestamp(), // valid, but more than 6 ahead of l1Y.Time
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -979,7 +993,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A4.ParentHash,
 						EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 						EpochHash:    l2A4.L1Origin.Hash,
-						Timestamp:    l2A4.Time,
+						Timestamp:    l2A4.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -999,14 +1013,14 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A3.ParentHash,
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number),
 						EpochHash:    l2A3.L1Origin.Hash,
-						Timestamp:    l2A3.Time,
+						Timestamp:    l2A3.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{ // we build l2A4, which has a timestamp of 2*4 = 8 higher than l2A0
 						ParentHash:   l2A4.ParentHash,
 						EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 						EpochHash:    l2A4.L1Origin.Hash,
-						Timestamp:    l2A4.Time,
+						Timestamp:    l2A4.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -1026,7 +1040,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A4.ParentHash,
 						EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 						EpochHash:    l2A4.L1Origin.Hash,
-						Timestamp:    l2A4.Time,
+						Timestamp:    l2A4.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -1046,14 +1060,14 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A3.ParentHash,
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number),
 						EpochHash:    l2A3.L1Origin.Hash,
-						Timestamp:    l2A3.Time,
+						Timestamp:    l2A3.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{ // we build l2A4, which has a timestamp of 2*4 = 8 higher than l2A0
 						ParentHash:   l2A4.ParentHash,
 						EpochNum:     rollup.Epoch(l2A4.L1Origin.Number),
 						EpochHash:    l2A4.L1Origin.Hash,
-						Timestamp:    l2A4.Time,
+						Timestamp:    l2A4.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -1073,7 +1087,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash: l2A1.ParentHash,
 						EpochNum:   rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:  l2A1.L1Origin.Hash,
-						Timestamp:  l2A1.Time,
+						Timestamp:  l2A1.MillisecondTimestamp(),
 						Transactions: []hexutil.Bytes{
 							[]byte{}, // empty tx data
 						},
@@ -1095,7 +1109,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash: l2A1.ParentHash,
 						EpochNum:   rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:  l2A1.L1Origin.Hash,
-						Timestamp:  l2A1.Time,
+						Timestamp:  l2A1.MillisecondTimestamp(),
 						Transactions: []hexutil.Bytes{
 							[]byte{types.DepositTxType, 0}, // piece of data alike to a deposit
 						},
@@ -1117,7 +1131,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A1.ParentHash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A1.Time,
+						Timestamp:    l2A1.MillisecondTimestamp(),
 						Transactions: []hexutil.Bytes{randTxData},
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -1136,7 +1150,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2B0.ParentHash,
 						EpochNum:     rollup.Epoch(l2B0.L1Origin.Number),
 						EpochHash:    l2B0.L1Origin.Hash,
-						Timestamp:    l2B0.Time,
+						Timestamp:    l2B0.MillisecondTimestamp(),
 						Transactions: []hexutil.Bytes{randTxData},
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -1155,7 +1169,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A2.Hash,
 						EpochNum:     rollup.Epoch(l2B0.L1Origin.Number),
 						EpochHash:    l2B0.L1Origin.Hash,
-						Timestamp:    l2A2.Time + defaultBlockTime,
+						Timestamp:    (l2A2.Time + defaultBlockTime) * 1000,
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -1175,14 +1189,14 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A1.Hash,
 						EpochNum:     rollup.Epoch(l2A2.L1Origin.Number),
 						EpochHash:    l2A2.L1Origin.Hash,
-						Timestamp:    l2A2.Time,
+						Timestamp:    l2A2.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{ // we build l2B0, which starts a new epoch too early
 						ParentHash:   l2A2.Hash,
 						EpochNum:     rollup.Epoch(l2B0.L1Origin.Number),
 						EpochHash:    l2B0.L1Origin.Hash,
-						Timestamp:    l2A2.Time + defaultBlockTime,
+						Timestamp:    (l2A2.Time + defaultBlockTime) * 1000,
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -1202,20 +1216,20 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A1.Hash,
 						EpochNum:     rollup.Epoch(l2A2.L1Origin.Number),
 						EpochHash:    l2A2.L1Origin.Hash,
-						Timestamp:    l2A2.Time,
+						Timestamp:    l2A2.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2A2.Hash,
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number),
 						EpochHash:    l2A3.L1Origin.Hash,
-						Timestamp:    l2A3.Time,
+						Timestamp:    l2A3.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
 			},
 			Expected:  BatchAccept,
-			ConfigMod: deltaAtGenesis,
+			ConfigMod: setDeltaAndL2Time,
 		},
 		{
 			Name:       "longer overlapping batch",
@@ -1228,27 +1242,27 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A0.Hash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A1.Time,
+						Timestamp:    l2A1.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2A1.Hash,
 						EpochNum:     rollup.Epoch(l2A2.L1Origin.Number),
 						EpochHash:    l2A2.L1Origin.Hash,
-						Timestamp:    l2A2.Time,
+						Timestamp:    l2A2.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2A2.Hash,
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number),
 						EpochHash:    l2A3.L1Origin.Hash,
-						Timestamp:    l2A3.Time,
+						Timestamp:    l2A3.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
 			},
 			Expected:  BatchAccept,
-			ConfigMod: deltaAtGenesis,
+			ConfigMod: setDeltaAndL2Time,
 		},
 		{
 			Name:       "fully overlapping batch",
@@ -1261,14 +1275,14 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A0.Hash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A1.Time,
+						Timestamp:    l2A1.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2A1.Hash,
 						EpochNum:     rollup.Epoch(l2A2.L1Origin.Number),
 						EpochHash:    l2A2.L1Origin.Hash,
-						Timestamp:    l2A2.Time,
+						Timestamp:    l2A2.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -1288,21 +1302,21 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A0.Hash,
 						EpochNum:     rollup.Epoch(l2A2.L1Origin.Number),
 						EpochHash:    l2A2.L1Origin.Hash,
-						Timestamp:    l2A2.Time,
+						Timestamp:    l2A2.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2A2.Hash,
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number),
 						EpochHash:    l2A3.L1Origin.Hash,
-						Timestamp:    l2A3.Time,
+						Timestamp:    l2A3.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
 			},
 			Expected:    BatchDrop,
 			ExpectedLog: "ignoring batch with mismatching parent hash",
-			ConfigMod:   deltaAtGenesis,
+			ConfigMod:   setDeltaAndL2Time,
 		},
 		{
 			Name:       "overlapping batch with invalid origin number",
@@ -1315,21 +1329,21 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A1.Hash,
 						EpochNum:     rollup.Epoch(l2A2.L1Origin.Number) + 1,
 						EpochHash:    l2A2.L1Origin.Hash,
-						Timestamp:    l2A2.Time,
+						Timestamp:    l2A2.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2A2.Hash,
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number),
 						EpochHash:    l2A3.L1Origin.Hash,
-						Timestamp:    l2A3.Time,
+						Timestamp:    l2A3.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
 			},
 			Expected:    BatchDrop,
 			ExpectedLog: "overlapped block's L1 origin number does not match",
-			ConfigMod:   deltaAtGenesis,
+			ConfigMod:   setDeltaAndL2Time,
 		},
 		{
 			Name:       "overlapping batch with invalid tx",
@@ -1342,21 +1356,21 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A1.Hash,
 						EpochNum:     rollup.Epoch(l2A2.L1Origin.Number),
 						EpochHash:    l2A2.L1Origin.Hash,
-						Timestamp:    l2A2.Time,
+						Timestamp:    l2A2.MillisecondTimestamp(),
 						Transactions: []hexutil.Bytes{randTxData},
 					},
 					{
 						ParentHash:   l2A2.Hash,
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number),
 						EpochHash:    l2A3.L1Origin.Hash,
-						Timestamp:    l2A3.Time,
+						Timestamp:    l2A3.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
 			},
 			Expected:    BatchDrop,
 			ExpectedLog: "overlapped block's tx count does not match",
-			ConfigMod:   deltaAtGenesis,
+			ConfigMod:   setDeltaAndL2Time,
 		},
 		{
 			Name:       "overlapping batch l2 fetcher error",
@@ -1369,28 +1383,28 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A0.ParentHash,
 						EpochNum:     rollup.Epoch(l2A0.L1Origin.Number),
 						EpochHash:    l2A0.L1Origin.Hash,
-						Timestamp:    l2A0.Time,
+						Timestamp:    l2A0.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2A0.Hash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A1.Time,
+						Timestamp:    l2A1.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2A1.Hash,
 						EpochNum:     rollup.Epoch(l2A2.L1Origin.Number),
 						EpochHash:    l2A2.L1Origin.Hash,
-						Timestamp:    l2A2.Time,
+						Timestamp:    l2A2.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
 			},
 			Expected:    BatchUndecided,
 			ExpectedLog: "failed to fetch L2 block",
-			ConfigMod:   deltaAtGenesis,
+			ConfigMod:   setDeltaAndL2Time,
 		},
 		{
 			Name:       "short block time",
@@ -1403,14 +1417,14 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A0.Hash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A0.Time + 1,
+						Timestamp:    (l2A0.Time + 1) * 1000,
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2A1.Hash,
 						EpochNum:     rollup.Epoch(l2A2.L1Origin.Number),
 						EpochHash:    l2A2.L1Origin.Hash,
-						Timestamp:    l2A1.Time + 1,
+						Timestamp:    (l2A1.Time + 1) * 1000,
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -1430,21 +1444,21 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A0.Hash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A0.Time - 1,
+						Timestamp:    l2A0.MillisecondTimestamp() - 20,
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2A1.Hash,
 						EpochNum:     rollup.Epoch(l2A2.L1Origin.Number),
 						EpochHash:    l2A2.L1Origin.Hash,
-						Timestamp:    l2A1.Time,
+						Timestamp:    l2A1.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
 			},
 			Expected:    BatchDrop,
 			ExpectedLog: "batch has misaligned timestamp, not overlapped exactly",
-			ConfigMod:   deltaAtGenesis,
+			ConfigMod:   setDeltaAndL2Time,
 		},
 		{
 			Name:       "failed to fetch overlapping block payload",
@@ -1457,21 +1471,21 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A2.Hash,
 						EpochNum:     rollup.Epoch(l2A3.L1Origin.Number),
 						EpochHash:    l2A3.L1Origin.Hash,
-						Timestamp:    l2A3.Time,
+						Timestamp:    l2A3.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 					{
 						ParentHash:   l2A3.Hash,
 						EpochNum:     rollup.Epoch(l2B0.L1Origin.Number),
 						EpochHash:    l2B0.L1Origin.Hash,
-						Timestamp:    l2B0.Time,
+						Timestamp:    l2B0.MillisecondTimestamp(),
 						Transactions: nil,
 					},
 				}, uint64(0), big.NewInt(0)),
 			},
 			Expected:    BatchUndecided,
 			ExpectedLog: "failed to fetch L2 block payload",
-			ConfigMod:   deltaAtGenesis,
+			ConfigMod:   setDeltaAndL2Time,
 		},
 		{
 			Name:       "singular batch before hard fork",
@@ -1483,7 +1497,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A1.ParentHash,
 					EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 					EpochHash:    l2A1.L1Origin.Hash,
-					Timestamp:    l2A1.Time,
+					Timestamp:    l2A1.MillisecondTimestamp(),
 					Transactions: []hexutil.Bytes{randTxData},
 				},
 			},
@@ -1501,7 +1515,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A1.ParentHash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A1.Time,
+						Timestamp:    l2A1.MillisecondTimestamp(),
 						Transactions: []hexutil.Bytes{randTxData},
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -1520,7 +1534,7 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2A1.ParentHash,
 					EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 					EpochHash:    l2A1.L1Origin.Hash,
-					Timestamp:    l2A1.Time,
+					Timestamp:    l2A1.MillisecondTimestamp(),
 					Transactions: []hexutil.Bytes{randTxData},
 				},
 			},
@@ -1538,7 +1552,7 @@ func TestValidBatch(t *testing.T) {
 						ParentHash:   l2A1.ParentHash,
 						EpochNum:     rollup.Epoch(l2A1.L1Origin.Number),
 						EpochHash:    l2A1.L1Origin.Hash,
-						Timestamp:    l2A1.Time,
+						Timestamp:    l2A1.MillisecondTimestamp(),
 						Transactions: []hexutil.Bytes{randTxData},
 					},
 				}, uint64(0), big.NewInt(0)),
@@ -1580,8 +1594,9 @@ func TestValidBatch(t *testing.T) {
 		ctx := context.Background()
 		rcfg := defaultConf()
 		if mod := testCase.ConfigMod; mod != nil {
-			mod(rcfg)
+			mod(rcfg, &testCase)
 		}
+		// TODO
 		validity := CheckBatch(ctx, rcfg, logger, testCase.L1Blocks, testCase.L2SafeHead, &testCase.Batch, &l2Client)
 		require.Equal(t, testCase.Expected, validity, "batch check must return expected validity level")
 		if expLog := testCase.ExpectedLog; expLog != "" {
@@ -1644,22 +1659,26 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2B0.Hash,
 					EpochNum:     rollup.Epoch(l2B1.L1Origin.Number),
 					EpochHash:    l2B1.L1Origin.Hash,
-					Timestamp:    l2B1.Time,
+					Timestamp:    l2B1.Time * 1000,
 					Transactions: []hexutil.Bytes{randTxData}, // Random generated TX that does not match overlapping block
 				},
 				{
 					ParentHash:   l2B1.Hash,
 					EpochNum:     rollup.Epoch(l2B2.L1Origin.Number),
 					EpochHash:    l2B2.L1Origin.Hash,
-					Timestamp:    l2B2.Time,
+					Timestamp:    l2B2.Time * 1000,
 					Transactions: nil,
 				},
-			}, uint64(0), big.NewInt(0)),
+			}, uint64(0) /* gensis ?? */, big.NewInt(0)),
 		},
 		Expected:    BatchDrop,
 		ExpectedLog: "overlapped block's transaction does not match",
-		ConfigMod:   deltaAtGenesis,
+		ConfigMod:   setDeltaAndL2Time,
 	}
+
+	fmt.Printf("AAAAA %d, %d\n", l2B1.Time, l2B2.Time)
+
+	time.Sleep(10 * time.Millisecond)
 
 	t.Run(differentTxtestCase.Name, func(t *testing.T) {
 		runTestCase(t, differentTxtestCase)
@@ -1678,6 +1697,7 @@ func TestValidBatch(t *testing.T) {
 	}
 	l2Client.Mock.On("PayloadByNumber", l2B1.Number).Return(&payload, &nilErr).Once()
 
+	// TODO: TargetBlockNumber
 	invalidTxTestCase := ValidBatchTestCase{
 		Name:       "invalid_tx_overlapping_batch",
 		L1Blocks:   []eth.L1BlockRef{l1B},
@@ -1689,21 +1709,21 @@ func TestValidBatch(t *testing.T) {
 					ParentHash:   l2B0.Hash,
 					EpochNum:     rollup.Epoch(l2B1.L1Origin.Number),
 					EpochHash:    l2B1.L1Origin.Hash,
-					Timestamp:    l2B1.Time,
+					Timestamp:    l2B1.Time * 1000,
 					Transactions: []hexutil.Bytes{randTxData},
 				},
 				{
 					ParentHash:   l2B1.Hash,
 					EpochNum:     rollup.Epoch(l2B2.L1Origin.Number),
 					EpochHash:    l2B2.L1Origin.Hash,
-					Timestamp:    l2B2.Time,
+					Timestamp:    l2B2.Time * 1000,
 					Transactions: nil,
 				},
 			}, uint64(0), big.NewInt(0)),
 		},
 		Expected:    BatchDrop,
 		ExpectedLog: "failed to extract L2BlockRef from execution payload",
-		ConfigMod:   deltaAtGenesis,
+		ConfigMod:   setDeltaAndL2Time,
 	}
 
 	t.Run(invalidTxTestCase.Name, func(t *testing.T) {
