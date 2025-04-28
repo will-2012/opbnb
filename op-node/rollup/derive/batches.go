@@ -236,9 +236,24 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 			// unable to validate the batch for now. retry later.
 			return BatchUndecided
 		}
+		log.Info("debug derive span batch, parent block",
+			"parent_block_hash", parentBlock.Hash,
+			"parent_block_number", parentBlock.Number,
+			"batch_timestamp", batch.GetTimestamp(),
+			"batch_epoch_num", batch.GetStartEpochNum(),
+			"batch_block_count", batch.GetBlockCount(),
+			"next_timestamp", nextMilliTimestamp,
+		)
 	}
 	if !batch.CheckParentHash(parentBlock.Hash) {
-		log.Warn("ignoring batch with mismatching parent hash", "parent_block", parentBlock.Hash)
+		log.Warn("ignoring batch with mismatching parent hash",
+			"parent_block_hash", parentBlock.Hash,
+			"parent_block_number", parentBlock.Number,
+			"batch_timestamp", batch.GetTimestamp(),
+			"batch_epoch_num", batch.GetStartEpochNum(),
+			"batch_block_count", batch.GetBlockCount(),
+			"next_timestamp", nextMilliTimestamp,
+			"l2_safe_head", l2SafeHead.String())
 		return BatchDrop
 	}
 

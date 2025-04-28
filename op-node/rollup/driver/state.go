@@ -423,7 +423,7 @@ func (s *Driver) eventLoop() {
 			if s.engineController.IsEngineSyncing() {
 				continue
 			}
-			s.log.Debug("Sync process step", "onto_origin", s.derivation.Origin(), "attempts", stepAttempts)
+			s.log.Info("Sync process step", "onto_origin", s.derivation.Origin(), "attempts", stepAttempts)
 			err := s.syncStep(s.driverCtx)
 			stepAttempts += 1 // count as attempt by default. We reset to 0 if we are making healthy progress.
 			if err == io.EOF {
