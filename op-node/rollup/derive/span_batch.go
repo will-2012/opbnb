@@ -394,6 +394,7 @@ func (b *RawSpanBatch) derive(rollupCfg *rollup.Config, genesisTimestamp uint64,
 			batch.Transactions = append(batch.Transactions, fullTxs[txIdx])
 			txIdx++
 		}
+		log.Info("debug derive span batch", "batch_timestamp", batch.Timestamp, "batch_epoch_num", batch.EpochNum)
 		spanBatch.Batches = append(spanBatch.Batches, &batch)
 	}
 	if millisecondTimestamp {
