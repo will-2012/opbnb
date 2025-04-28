@@ -187,7 +187,7 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 	)
 
 	defer func() {
-		log.Info("debug engine queue step", "fcuCalled", fcuCalled, "err", err)
+		log.Info("debug engine queue step", "fcuCalled", fcuCalled, "err", err, "is_engine_syncing", eq.isEngineSyncing())
 	}()
 
 	// If we don't need to call FCU to restore unsafeHead using backupUnsafe, keep going b/c
@@ -240,14 +240,20 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 	eq.origin = newOrigin
 
 	if next, err := eq.prev.NextAttributes(ctx, eq.ec.PendingSafeL2Head()); err == io.EOF {
-		log.Info("debug engine queue, failed to get next attributes", "err", err)
+		log.Info("debug engine queue, failed to get next attributes",
+			"err", err,
+			"pending_safe_head", eq.ec.PendingSafeL2Head(),
+			"origin", eq.origin)
 		return io.EOF
 	} else if err != nil {
-		log.Info("debug engine queue, failed to get next attributes", "err", err)
+		log.Info("debug engine queue, failed to get next attributes",
+			"err", err,
+			"pending_safe_head", eq.ec.PendingSafeL2Head(),
+			"origin", eq.origin)
 		return err
 	} else {
 		eq.attributesHandler.SetAttributes(next)
-		eq.log.Info("Adding next safe attributes", "safe_head", eq.ec.SafeL2Head(),
+		eq.log.Info("debug engine queue, Adding next safe attributes", "safe_head", eq.ec.SafeL2Head(),
 			"pending_safe_head", eq.ec.PendingSafeL2Head(), "next", next)
 		return NotEnoughData
 	}

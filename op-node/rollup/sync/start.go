@@ -155,7 +155,7 @@ func FindL2Heads(ctx context.Context, cfg *rollup.Config, l1 L1Chain, l2 L2Chain
 			lgr.Info("Walking back L1Block by number", "curr", l1Block, "next", b, "l2block", n)
 		}
 
-		lgr.Trace("walking sync start", "l2block", n)
+		lgr.Info("walking sync start", "l2block", n)
 
 		// Don't walk past genesis. If we were at the L2 genesis, but could not find its L1 origin,
 		// the L2 chain is building on the wrong L1 branch.
