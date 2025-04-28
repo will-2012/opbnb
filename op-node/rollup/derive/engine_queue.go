@@ -181,28 +181,42 @@ func (eq *EngineQueue) isEngineSyncing() bool {
 }
 
 func (eq *EngineQueue) Step(ctx context.Context) error {
+	var (
+		err       error
+		fcuCalled bool
+	)
+
+	defer func() {
+		log.Info("debug engine queue step", "fcuCalled", fcuCalled, "err", err)
+	}()
+
 	// If we don't need to call FCU to restore unsafeHead using backupUnsafe, keep going b/c
 	// this was a no-op(except correcting invalid state when backupUnsafe is empty but TryBackupUnsafeReorg called).
-	if fcuCalled, err := eq.ec.TryBackupUnsafeReorg(ctx); fcuCalled {
+	if fcuCalled, err = eq.ec.TryBackupUnsafeReorg(ctx); fcuCalled {
 		// If we needed to perform a network call, then we should yield even if we did not encounter an error.
+		log.Info("debug engine queue, try backup unsafe reorg", "fcuCalled", fcuCalled, "err", err)
 		return err
 	}
 	// If we don't need to call FCU, keep going b/c this was a no-op. If we needed to
 	// perform a network call, then we should yield even if we did not encounter an error.
 	if err := eq.ec.TryUpdateEngine(ctx); !errors.Is(err, ErrNoFCUNeeded) {
+		log.Info("debug engine queue, try update engine", "err", err)
 		return err
 	}
 	if eq.isEngineSyncing() {
 		// The pipeline cannot move forwards if doing EL sync.
+		log.Info("debug engine queue, engine syncing")
 		return EngineELSyncing
 	}
 	if err := eq.attributesHandler.Proceed(ctx); err != io.EOF {
+		log.Info("debug engine queue, attributeshander", "err", err)
 		return err // if nil, or not EOF, then the attribute processing has to be revisited later.
 	}
 	if eq.lastNotifiedSafeHead != eq.ec.SafeL2Head() {
 		eq.lastNotifiedSafeHead = eq.ec.SafeL2Head()
 		// make sure we track the last L2 safe head for every new L1 block
 		if err := eq.safeHeadNotifs.SafeHeadUpdated(eq.lastNotifiedSafeHead, eq.origin.ID()); err != nil {
+			log.Info("debug engine queue, failed to safe head updated", "err", err)
 			// At this point our state is in a potentially inconsistent state as we've updated the safe head
 			// in the execution client but failed to post process it. Reset the pipeline so the safe head rolls back
 			// a little (it always rolls back at least 1 block) and then it will retry storing the entry
@@ -213,23 +227,27 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 
 	// try to finalize the L2 blocks we have synced so far (no-op if L1 finality is behind)
 	if err := eq.finalizer.OnDerivationL1End(ctx, eq.origin); err != nil {
+		log.Info("debug engine queue, failed to on derivation l1 end", "err", err)
 		return fmt.Errorf("finalizer OnDerivationL1End error: %w", err)
 	}
 
 	newOrigin := eq.prev.Origin()
 	// Check if the L2 unsafe head origin is consistent with the new origin
 	if err := eq.verifyNewL1Origin(ctx, newOrigin); err != nil {
+		log.Info("debug engine queue, failed to verify new l1 origin", "err", err)
 		return err
 	}
 	eq.origin = newOrigin
 
 	if next, err := eq.prev.NextAttributes(ctx, eq.ec.PendingSafeL2Head()); err == io.EOF {
+		log.Info("debug engine queue, failed to get next attributes", "err", err)
 		return io.EOF
 	} else if err != nil {
+		log.Info("debug engine queue, failed to get next attributes", "err", err)
 		return err
 	} else {
 		eq.attributesHandler.SetAttributes(next)
-		eq.log.Debug("Adding next safe attributes", "safe_head", eq.ec.SafeL2Head(),
+		eq.log.Info("Adding next safe attributes", "safe_head", eq.ec.SafeL2Head(),
 			"pending_safe_head", eq.ec.PendingSafeL2Head(), "next", next)
 		return NotEnoughData
 	}
