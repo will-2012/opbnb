@@ -51,6 +51,7 @@ func (l1t *L1Traversal) Origin() eth.L1BlockRef {
 func (l1t *L1Traversal) NextL1Block(_ context.Context) (eth.L1BlockRef, error) {
 	if !l1t.done {
 		l1t.done = true
+		log.Info("debug l1 traversal, next l1 block", "block", l1t.block)
 		return l1t.block, nil
 	} else {
 		return eth.L1BlockRef{}, io.EOF

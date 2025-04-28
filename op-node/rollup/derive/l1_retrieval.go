@@ -59,7 +59,7 @@ func (l1r *L1Retrieval) NextData(ctx context.Context) ([]byte, error) {
 		}
 	}
 
-	l1r.log.Debug("fetching next piece of data")
+	l1r.log.Info("fetching next piece of data", "origin", l1r.prev.Origin())
 	data, err := l1r.datas.Next(ctx)
 	if err == io.EOF {
 		l1r.datas = nil

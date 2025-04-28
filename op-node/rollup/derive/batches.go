@@ -238,7 +238,7 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 		}
 	}
 	if !batch.CheckParentHash(parentBlock.Hash) {
-		log.Warn("ignoring batch with mismatching parent hash", "parent_block", parentBlock.Hash)
+		log.Warn("ignoring batch with mismatching parent hash", "parent_block_hash", parentBlock.Hash, "parent_block_number", parentBlock.Number)
 		return BatchDrop
 	}
 

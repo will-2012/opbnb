@@ -249,7 +249,7 @@ func (cfg *Config) MillisecondTimestampForBlock(blockNumber uint64) uint64 {
 
 func (cfg *Config) TargetBlockNumber(milliTimestamp uint64) (num uint64, err error) {
 	voltaBlockNumber := cfg.VoltaBlockNumber()
-	if voltaBlockNumber == 0 || milliTimestamp <= *cfg.VoltaTime*1000 {
+	if voltaBlockNumber == 0 || milliTimestamp < *cfg.VoltaTime*1000 {
 		// subtract genesis time from timestamp to get the time elapsed since genesis, and then divide that
 		// difference by the block time to get the expected L2 block number at the current time. If the
 		// unsafe head does not have this block number, then there is a gap in the queue.
