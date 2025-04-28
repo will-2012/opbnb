@@ -252,7 +252,8 @@ func checkSpanBatch(ctx context.Context, cfg *rollup.Config, log log.Logger, l1B
 			"batch_timestamp", batch.GetTimestamp(),
 			"batch_epoch_num", batch.GetStartEpochNum(),
 			"batch_block_count", batch.GetBlockCount(),
-			"next_timestamp", nextMilliTimestamp)
+			"next_timestamp", nextMilliTimestamp,
+			"l2_safe_head", l2SafeHead.String())
 		return BatchDrop
 	}
 
