@@ -424,7 +424,9 @@ func (s *Driver) eventLoop() {
 				continue
 			}
 			s.log.Debug("Sync process step", "onto_origin", s.derivation.Origin(), "attempts", stepAttempts)
+			start := time.Now()
 			err := s.syncStep(s.driverCtx)
+			s.log.Debug("Sync process step", "onto_origin", s.derivation.Origin(), "attempts", stepAttempts, "err", err, "time_cost", time.Since(start))
 			stepAttempts += 1 // count as attempt by default. We reset to 0 if we are making healthy progress.
 			if err == io.EOF {
 				s.log.Debug("Derivation process went idle", "progress", s.derivation.Origin(), "err", err)

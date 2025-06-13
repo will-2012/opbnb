@@ -83,6 +83,7 @@ func (aq *AttributesQueue) NextAttributes(ctx context.Context, parent eth.L2Bloc
 // createNextAttributes transforms a batch into a payload attributes. This sets `NoTxPool` and appends the batched transactions
 // to the attributes transaction list
 func (aq *AttributesQueue) createNextAttributes(ctx context.Context, batch *SingularBatch, l2SafeHead eth.L2BlockRef) (*eth.PayloadAttributes, error) {
+	aq.log.Debug("debug safehead, createNextAttributes", "batch", batch, "l2SafeHead", l2SafeHead)
 	// sanity check parent hash
 	if batch.ParentHash != l2SafeHead.Hash {
 		return nil, NewResetError(fmt.Errorf("valid batch has bad parent hash %s, expected %s", batch.ParentHash, l2SafeHead.Hash))
@@ -93,10 +94,13 @@ func (aq *AttributesQueue) createNextAttributes(ctx context.Context, batch *Sing
 	}
 	fetchCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
+	start := time.Now()
 	attrs, err := aq.builder.PreparePayloadAttributes(fetchCtx, l2SafeHead, batch.Epoch())
 	if err != nil {
+		aq.log.Debug("debug safehead, failed to createNextAttributes", "batch", batch, "l2SafeHead", l2SafeHead, "err", err, "time_cost", time.Since(start))
 		return nil, err
 	}
+	aq.log.Debug("debug safehead, succeed to createNextAttributes", "batch", batch, "l2SafeHead", l2SafeHead, "time_cost", time.Since(start))
 
 	// we are verifying, not sequencing, we've got all transactions and do not pull from the tx-pool
 	// (that would make the block derivation non-deterministic)

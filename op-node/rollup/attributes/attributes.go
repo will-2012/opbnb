@@ -68,6 +68,7 @@ func (eq *AttributesHandler) SetAttributes(attributes *derive.AttributesWithPare
 // Proceed returns a temporary, reset, or critical error like other derivers.
 // Proceed returns no error if the safe-head may have changed.
 func (eq *AttributesHandler) Proceed(ctx context.Context) error {
+	eq.log.Debug("debug safehead, proceed", "attributes", eq.attributes)
 	if eq.attributes == nil {
 		return io.EOF
 	}
@@ -82,20 +83,27 @@ func (eq *AttributesHandler) Proceed(ctx context.Context) error {
 			eq.attributes = nil
 			return nil
 		}
+		eq.log.Debug("debug safehead, failed to proceed due to pending safe head changed", "pending_safe_head", eq.ec.PendingSafeL2Head(), "pending_safe_head_parent", eq.ec.PendingSafeL2Head().ParentID(), "attributes_parent", eq.attributes.Parent)
 		// If something other than a simple advance occurred, perform a full reset
 		return derive.NewResetError(fmt.Errorf("pending safe head changed to %s with parent %s, conflicting with queued safe attributes on top of %s",
 			eq.ec.PendingSafeL2Head(), eq.ec.PendingSafeL2Head().ParentID(), eq.attributes.Parent))
 	}
 	if eq.ec.PendingSafeL2Head().Number < eq.ec.UnsafeL2Head().Number {
+		eq.log.Debug("debug safehead, proceed consolidateNextSafeAttributes", "unsafe_head", eq.ec.UnsafeL2Head(), "pending_safe_head", eq.ec.PendingSafeL2Head())
 		if err := eq.consolidateNextSafeAttributes(ctx, eq.attributes); err != nil {
+			eq.log.Debug("debug safehead, failed to proceed due to consolidateNextSafeAttributes", "unsafe_head", eq.ec.UnsafeL2Head(), "pending_safe_head", eq.ec.PendingSafeL2Head(), "err", err)
 			return err
 		}
+		eq.log.Debug("debug safehead, proceed consolidateNextSafeAttributes success", "unsafe_head", eq.ec.UnsafeL2Head(), "pending_safe_head", eq.ec.PendingSafeL2Head())
 		eq.attributes = nil
 		return nil
 	} else if eq.ec.PendingSafeL2Head().Number == eq.ec.UnsafeL2Head().Number {
+		eq.log.Debug("debug safehead, proceed forceNextSafeAttributes", "unsafe_head", eq.ec.UnsafeL2Head(), "pending_safe_head", eq.ec.PendingSafeL2Head())
 		if err := eq.forceNextSafeAttributes(ctx, eq.attributes); err != nil {
+			eq.log.Debug("debug safehead, failed to proceed due to forceNextSafeAttributes", "unsafe_head", eq.ec.UnsafeL2Head(), "pending_safe_head", eq.ec.PendingSafeL2Head(), "err", err)
 			return err
 		}
+		eq.log.Debug("debug safehead, proceed forceNextSafeAttributes success", "unsafe_head", eq.ec.UnsafeL2Head(), "pending_safe_head", eq.ec.PendingSafeL2Head())
 		eq.attributes = nil
 		return nil
 	} else {
@@ -130,10 +138,12 @@ func (eq *AttributesHandler) consolidateNextSafeAttributes(ctx context.Context, 
 	if err != nil {
 		return derive.NewResetError(fmt.Errorf("failed to decode L2 block ref from payload: %w", err))
 	}
+	eq.log.Debug("debug safehead, consolidateNextSafeAttributes success", "unsafe_head", eq.ec.UnsafeL2Head(), "pending_safe_head", eq.ec.PendingSafeL2Head(), "safe_head", eq.ec.SafeL2Head())
 	eq.ec.SetPendingSafeL2Head(ref)
 	if attributes.IsLastInSpan {
 		eq.ec.SetSafeHead(ref)
 	}
+	eq.log.Debug("debug safehead, consolidateNextSafeAttributes success", "unsafe_head", eq.ec.UnsafeL2Head(), "pending_safe_head", eq.ec.PendingSafeL2Head(), "safe_head", eq.ec.SafeL2Head())
 	// unsafe head stays the same, we did not reorg the chain.
 	return nil
 }
